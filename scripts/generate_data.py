@@ -63,6 +63,13 @@ parser.add_argument(
     required=True,
 )
 
+parser.add_argument(
+    "--restart",
+    type=str,
+    default=None,
+    help="Restart file for flow past cylinder.",
+    required=False,
+)
 
 args = parser.parse_args()
 
@@ -74,6 +81,7 @@ model_disc = args.model_disc
 control_disc = args.control_disc
 filter_len = args.filter_len
 dest = args.dest
+restart = args.restart
 
 if args.simulator == "SpringMassControl":
     # For the data generated in the paper:
@@ -156,6 +164,7 @@ elif simulator == "CylinderControl":
     sim = Simulators.CylinderControl(
         model_disc=model_disc,
         control_disc=control_disc,
+        restart=restart,
     )
     Nu = 1
     Ns = 2

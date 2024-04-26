@@ -1,7 +1,7 @@
 import numpy as np
 import hydrogym.firedrake as hgym
 import torch
-
+import importlib
 
 class CylinderControl:
     """Wrapper for hydrogym's flow past a cylinder (rotary).
@@ -28,7 +28,7 @@ class CylinderControl:
     """
 
     def __init__(
-        self, model_disc: float = 0.0025, control_disc: float = 0.1, config: dict = None
+        self, model_disc: float = 0.0025, control_disc: float = 0.1, restart: str = None
     ) -> None:
         """Initialize environment with model and control discretizations.
 
@@ -43,11 +43,21 @@ class CylinderControl:
         """
         self.model_disc = model_disc
         self.control_disc = control_disc
-        if config is None:
+        if restart is None:
             config_dict = {
                 "flow": hgym.RotaryCylinder,
                 "flow_config": {
-                    "restart": "transient_run.h5",
+                    "dt": model_disc,
+                    "mesh": "medium",
+                },
+                "solver": hgym.SemiImplicitBDF,
+                "solver_config": {"dt": model_disc},
+            }
+        else:
+            config_dict = {
+                "flow": hgym.RotaryCylinder,
+                "flow_config": {
+                    "restart": restart,
                     "dt": model_disc,
                     "mesh": "medium",
                 },
