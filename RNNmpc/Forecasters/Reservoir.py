@@ -131,7 +131,7 @@ class Reservoir(nn.Module):
 
         while_count = 0
 
-        while np.linalg.matrix_rank(A) < self.Ns + self.Nu and while_count < 10:
+        while np.linalg.matrix_rank(A) < self.Nr and while_count < 10:
             inc_indices = np.random.choice(
                 self.Nr * self.Nr,
                 (int(self.Nr * self.Nr * self.rho_A),),
