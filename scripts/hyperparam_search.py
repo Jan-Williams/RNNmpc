@@ -104,8 +104,8 @@ def forecast_eval(
             sigma_b=sigma_b,
             alpha=alpha
         )
-        esn_r = model.fit(U_train, S_train, O_train, beta=beta)
         model.set_device(device)
+        esn_r = model.fit(U_train, S_train, O_train, beta=beta)
         tot_forecast = torch.zeros((No, 0)).to("cpu")
         for i in range(10):
             fcast_start_index = U_train.shape[1] + i * fcast_steps
