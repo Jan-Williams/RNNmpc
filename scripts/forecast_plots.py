@@ -250,7 +250,7 @@ fig, ax = plt.subplots(3)
 # fig.suptitle(data_dict['simulator'], fontsize=20)
 for ii in range(O_valid.shape[0]):
     label = "$x_{index}$"
-    ax[0].plot(t_range, O_valid[ii], label=label.format(index=ii + 1), linewidth=2)
+    ax[0].plot(t_range, (O_valid[ii] - np.mean(O_valid[ii])) / np.mean(O_valid[ii]), label=label.format(index=ii + 1), linewidth=2)
 for ii in range(10):
     if ii == 0:
         ax[0].axvline(
@@ -288,7 +288,7 @@ ax[2].legend(fontsize=15, loc="center right")
 ax[2].set_ylabel("Error", fontsize=18)
 ax[2].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
 ax[2].set_xlabel("$t$", fontsize=18)
-ax[2].set_yticks([1e-3, 1e-1, 1e1])
+ax[2].set_yticks([1e-5, 1e-3, 1e-1])
 ax[2].tick_params(axis="both", which="major", labelsize=14)
 ax[2].tick_params(axis="both", which="minor", labelsize=14)
 
