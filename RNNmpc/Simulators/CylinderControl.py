@@ -3,6 +3,7 @@ import hydrogym.firedrake as hgym
 import torch
 import importlib
 
+
 class CylinderControl:
     """Wrapper for hydrogym's flow past a cylinder (rotary).
 

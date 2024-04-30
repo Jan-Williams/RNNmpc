@@ -1,6 +1,7 @@
 from neuromancer import psl
 import numpy as np
-import torch 
+import torch
+
 
 class StirredTankControl:
     """Simulation object for stirred tank system.

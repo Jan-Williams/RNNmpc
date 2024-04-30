@@ -2,6 +2,7 @@ import control
 import numpy as np
 import torch
 
+
 class SpringMassControl:
     """Simulation object for spring mass system.
 

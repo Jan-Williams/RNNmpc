@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from RNNmpc.Forecasters.Training import fit_fc
 
+
 class FCForecaster(nn.Module):
     """Fully connected model for forecasting given known control inputs.
 

@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from RNNmpc.Forecasters.Reservoir import Reservoir
 
+
 class ESNForecaster(nn.Module):
     """ESN model for forecasting given known control inputs.
 

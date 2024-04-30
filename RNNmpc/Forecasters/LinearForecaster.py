@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
+
 class LinearForecaster(nn.Module):
     """DMDc based linear model for forecasting.
 

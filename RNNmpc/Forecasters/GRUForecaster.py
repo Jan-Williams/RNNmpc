@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from RNNmpc.Forecasters.Training import fit_rnn
 
+
 class GRUForecaster(nn.Module):
     """GRU model for forecasting given known control inputs.
 

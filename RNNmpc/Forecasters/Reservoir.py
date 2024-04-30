@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
+
 class Reservoir(nn.Module):
     """Reservoir module for use with ESNForecaster.
 

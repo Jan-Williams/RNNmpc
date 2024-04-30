@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import scipy.integrate
 
+
 class LorenzControl:
     """Simulation object for Lorenz control system.
 
