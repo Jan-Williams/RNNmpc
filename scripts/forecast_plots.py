@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from RNNmpc.utils import forecast_eval
 
 plt.style.use("seaborn-v0_8")
 import json
@@ -35,7 +36,6 @@ args = parser.parse_args()
 best_params_dict = args.best_hyperparams_dict
 best_params_dict = json.load(open(best_params_dict))
 data_dict = args.data_dict
-data_dict = json.load(open(data_dict))
 dest = args.dest
 
 train_steps = 5000
@@ -75,33 +75,17 @@ sigma_b = best_params_dict["ESNForecaster"]["sigma_b"]
 sigma = best_params_dict["ESNForecaster"]["sigma"]
 beta = best_params_dict["ESNForecaster"]["beta"]
 rho_sr = best_params_dict["ESNForecaster"]["rho_sr"]
-esn = Forecaster.ESNForecaster(
-    Nr=1000,
-    Nu=Nu,
-    Ns=Ns,
-    No=No,
+
+_, forecast_esn = forecast_eval(
+    "ESNForecaster",
+    data_dict=data_dict, 
     alpha=alpha,
     sigma_b=sigma_b,
     sigma=sigma,
-    rho_sr=rho_sr,
+    beta=beta,
+    rho_sr=rho_sr
 )
-esn_r = esn.fit(U_train, S_train, O_train, beta=beta)
-forecast_esn = torch.zeros((No, 0)).to("cpu")
 
-for i in range(10):
-    fcast_start_index = U_train.shape[1] + i * fcast_steps
-    spin_r = esn.spin(
-        U_spin=concat_U[:, fcast_start_index - 500 : fcast_start_index],
-        S_spin=concat_S[:, fcast_start_index - 500 : fcast_start_index],
-    )
-    fcast = esn.forecast(
-        concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-        r_k=spin_r,
-        s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
-    )
-    forecast_esn = torch.hstack((forecast_esn, fcast.to("cpu")))
-
-forecast_esn = forecast_esn.detach().cpu().numpy()
 O_valid = O_valid.detach().cpu().numpy()
 esn_dev_list = np.linalg.norm(forecast_esn - O_valid, axis=0)
 
@@ -109,86 +93,28 @@ esn_dev_list = np.linalg.norm(forecast_esn - O_valid, axis=0)
 beta = best_params_dict["LinearForecaster"]["beta"]
 tds = best_params_dict["LinearForecaster"]["tds"]
 
-linear = Forecaster.LinearForecaster(Nu=Nu, Ns=Ns, No=No, tds=tds)
-linear.fit(U_train, S_train, O_train, beta=beta)
-
-forecast_linear = torch.zeros((No, 0)).to("cpu")
-
-for i in range(10):
-    fcast_start_index = U_train.shape[1] + i * fcast_steps
-    fcast = linear.forecast(
-        U=concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-        U_spin=concat_U[
-            :, fcast_start_index - max(abs(np.array(tds))) + 1 : fcast_start_index
-        ],
-        S_spin=concat_S[
-            :, fcast_start_index - max(abs(np.array(tds))) + 1 : fcast_start_index
-        ],
-        s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
-    )
-    forecast_linear = torch.hstack((forecast_linear, fcast.to("cpu")))
-
-forecast_linear = forecast_linear.detach().cpu().numpy()
+_, forecast_linear = forecast_eval(
+    "LinearForecaster",
+    data_dict=data_dict, 
+    beta=beta,
+    tds=tds
+)
 linear_dev_list = np.linalg.norm(forecast_linear - O_valid, axis=0)
 
-### Reinitialize for scaled data
 
-U_train = np.array(data_dict["U_train"])[:, -train_steps:]
-S_train = np.array(data_dict["S_train"])[:, -train_steps:]
-O_train = np.array(data_dict["O_train"])[:, -train_steps:]
-
-U_valid = np.array(data_dict["U_valid"])
-S_valid = np.array(data_dict["S_valid"])
-
-sensor_scaler = MinMaxScaler()
-S_train = sensor_scaler.fit_transform(S_train.T).T
-S_valid = sensor_scaler.transform(S_valid.T).T
-O_train = sensor_scaler.transform(O_train.T).T
-
-control_scaler = MinMaxScaler()
-U_train = control_scaler.fit_transform(U_train.T).T
-U_valid = control_scaler.transform(U_valid.T).T
-
-U_train = torch.tensor(U_train, dtype=torch.float64)
-S_train = torch.tensor(S_train, dtype=torch.float64)
-O_train = torch.tensor(O_train, dtype=torch.float64)
-
-U_valid = torch.tensor(U_valid, dtype=torch.float64)
-S_valid = torch.tensor(S_valid, dtype=torch.float64)
-
-concat_U = torch.hstack((U_train, U_valid))
-concat_S = torch.hstack((S_train, S_valid))
-
-
-### Train FC
+## Train FC
 tds = best_params_dict["FCForecaster"]["tds"]
 lr = best_params_dict["FCForecaster"]["adam_lr"]
 r_width = best_params_dict["FCForecaster"]["r_width"]
 dropout_p = best_params_dict["FCForecaster"]["dropout_p"]
 
-model = Forecaster.FCForecaster(
-    Nu=Nu, Ns=Ns, No=No, tds=tds, r_list=[r_width, r_width], dropout_p=dropout_p
+_, forecast_fc = forecast_eval(
+    "FCForecaster",
+    data_dict=data_dict, 
+    adam_lr=lr,
+    tds=tds,
+    dropout_p=dropout_p,
 )
-model.fit(U_train, S_train, O_train, lr=lr)
-
-forecast_fc = torch.zeros((No, 0)).to("cpu")
-
-for i in range(10):
-    fcast_start_index = U_train.shape[1] + i * fcast_steps
-    fcast = model.forecast(
-        U=concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-        U_spin=concat_U[
-            :, fcast_start_index - max(abs(np.array(tds))) + 1 : fcast_start_index
-        ],
-        S_spin=concat_S[
-            :, fcast_start_index - max(abs(np.array(tds))) + 1 : fcast_start_index
-        ],
-        s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
-    )
-    forecast_fc = torch.hstack((forecast_fc, fcast.to("cpu")))
-
-forecast_fc = forecast_fc.detach().cpu().numpy()
-forecast_fc = sensor_scaler.inverse_transform(forecast_fc.T).T
 fc_dev_list = np.linalg.norm(forecast_fc - O_valid, axis=0)
 
 
@@ -198,25 +124,16 @@ lags = best_params_dict["GRUForecaster"]["lags"]
 dropout_p = best_params_dict["GRUForecaster"]["dropout_p"]
 lr = best_params_dict["GRUForecaster"]["adam_lr"]
 Nr = hidden_dim
-model = Forecaster.GRUForecaster(Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p)
-out_r = model.fit(U_train, S_train, O_train, lags=lags, lr=lr)
 
-forecast_gru = torch.zeros((No, 0)).to("cpu")
-
-for i in range(10):
-    fcast_start_index = U_train.shape[1] + i * fcast_steps
-    fcast = model.forecast(
-        U=concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-        U_spin=concat_U[:, fcast_start_index - lags + 1 : fcast_start_index],
-        S_spin=concat_S[:, fcast_start_index - lags + 1 : fcast_start_index],
-        s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
-    )
-    forecast_gru = torch.hstack((forecast_gru, fcast.to("cpu")))
-
-forecast_gru = forecast_gru.detach().cpu().numpy()
-forecast_gru = sensor_scaler.inverse_transform(forecast_gru.T).T
+_, forecast_gru = forecast_eval(
+    "GRUForecaster",
+    data_dict=data_dict, 
+    adam_lr=lr,
+    lags=lags,
+    dropout_p=dropout_p,
+    hidden_dim=Nr
+)
 gru_dev_list = np.linalg.norm(forecast_gru - O_valid, axis=0)
-
 
 ### Train LSTM
 hidden_dim = best_params_dict["LSTMForecaster"]["Nr"]
@@ -224,26 +141,18 @@ lags = best_params_dict["LSTMForecaster"]["lags"]
 dropout_p = best_params_dict["LSTMForecaster"]["dropout_p"]
 lr = best_params_dict["LSTMForecaster"]["adam_lr"]
 Nr = hidden_dim
-model = Forecaster.LSTMForecaster(Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p)
-out_r = model.fit(U_train, S_train, O_train, lags=lags, lr=lr)
 
-forecast_lstm = torch.zeros((No, 0)).to("cpu")
-
-for i in range(10):
-    fcast_start_index = U_train.shape[1] + i * fcast_steps
-    fcast = model.forecast(
-        U=concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-        U_spin=concat_U[:, fcast_start_index - lags + 1 : fcast_start_index],
-        S_spin=concat_S[:, fcast_start_index - lags + 1 : fcast_start_index],
-        s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
-    )
-    forecast_lstm = torch.hstack((forecast_lstm, fcast.to("cpu")))
-
-forecast_lstm = forecast_lstm.detach().cpu().numpy()
-forecast_lstm = sensor_scaler.inverse_transform(forecast_lstm.T).T
+_, forecast_lstm = forecast_eval(
+    "LSTMForecaster",
+    data_dict=data_dict, 
+    adam_lr=lr,
+    lags=lags,
+    dropout_p=dropout_p,
+    hidden_dim=Nr
+)
 lstm_dev_list = np.linalg.norm(forecast_lstm - O_valid, axis=0)
 
-U_valid = control_scaler.inverse_transform(U_valid.detach().numpy().T).T
+U_valid = np.array(json.load(data_dict)['U_valid'])
 
 
 fig, ax = plt.subplots(3)
