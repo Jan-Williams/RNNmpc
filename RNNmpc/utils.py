@@ -19,6 +19,7 @@ def forecast_eval(
     r_width: int = 50,
     hidden_dim: int = 32,
     train_steps: int = 5000,
+    noise_level = 0.0
 ):
     """
     Evaluation of RNNmpc.Forecaster model on data output from generate_data.
@@ -64,11 +65,32 @@ def forecast_eval(
     data_dict = json.load(f)
 
     U_train = np.array(data_dict["U_train"])[:, -train_steps:]
+    for i in range(U_train.shape[0]):
+        noise_mag = noise_level * np.std(U_train[i])
+        noise_sig = np.random.normal(0, noise_mag, size=U_train[i].shape)
+        U_train += noise_sig
+
     S_train = np.array(data_dict["S_train"])[:, -train_steps:]
+    for i in range(S_train.shape[0]):
+        noise_mag = noise_level * np.std(S_train[i])
+        noise_sig = np.random.normal(0, noise_mag, size=S_train[i].shape)
+        S_train += noise_sig
     O_train = np.array(data_dict["O_train"])[:, -train_steps:]
+    for i in range(O_train.shape[0]):
+        noise_mag = noise_level * np.std(O_train[i])
+        noise_sig = np.random.normal(0, noise_mag, size=O_train[i].shape)
+        O_train += noise_sig
 
     U_valid = np.array(data_dict["U_valid"])
+    for i in range(U_valid.shape[0]):
+        noise_mag = noise_level * np.std(U_valid[i])
+        noise_sig = np.random.normal(0, noise_mag, size=U_valid[i].shape)
+        U_valid += noise_sig
     S_valid = np.array(data_dict["S_valid"])
+    for i in range(S_valid.shape[0]):
+        noise_mag = noise_level * np.std(S_valid[i])
+        noise_sig = np.random.normal(0, noise_mag, size=S_valid[i].shape)
+        S_valid += noise_sig
     O_valid = np.array(data_dict["O_valid"])
 
     if scaled:
@@ -92,7 +114,7 @@ def forecast_eval(
 
     concat_U = torch.hstack((U_train, U_valid))
     concat_S = torch.hstack((S_train, S_valid))
-    concat_O = torch.hstack((S_train, S_valid))
+    concat_O = torch.hstack((O_train, O_valid))
 
     No = O_valid.shape[0]
     Ns = S_valid.shape[0]
