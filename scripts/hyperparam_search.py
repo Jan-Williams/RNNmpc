@@ -34,7 +34,7 @@ noise_level = args.noise_level
 dest = args.dest
 
 
-### Run throught hyperparam combinations
+# ### Run throught hyperparam combinations
 hyperparam_dict = {}
 alpha_list = [0.2, 0.4, 0.6, 0.8]
 beta_list = [1e-4, 1e-5, 1e-6, 1e-7]
@@ -137,11 +137,11 @@ for adam_lr in adam_lr_list:
 
 
 r_width_list = [10, 25, 50, 75, 100]
-tds_list = [1, 5, 10, 15, 20]
+tds_list =  [1, 5, 10, 15, 20]
 adam_lr_list = [1e-2, 1e-3, 1e-4]
 dropout_p_list = [0.0, 0.01, 0.02, 0.05, 0.1]
 fc_tot_count = (
-    len(r_width_list) * len(lags_list) * len(dropout_p_list) * len(adam_lr_list)
+    len(r_width_list) * len(tds_list) * len(dropout_p_list) * len(adam_lr_list)
 )
 counter = 0
 print("LSTM tuning complete, starting FC tuning.")
@@ -149,7 +149,6 @@ for r_width in r_width_list:
     for tds in tds_list:
         for adam_lr in adam_lr_list:
             for dropout_p in dropout_p_list:
-
                 ret_dict, _ = forecast_eval(
                     "FCForecaster",
                     data_dict=data_dict,
@@ -170,7 +169,7 @@ for r_width in r_width_list:
 
 beta_list = [0.0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
 tds_list = [5, 10, 15, 20]
-lin_tot_count = len(beta_list) * len(lags_list)
+lin_tot_count = len(beta_list) * len(tds_list)
 counter = 0
 print("FC tuning complete, starting Linear tuning.")
 for beta in beta_list:

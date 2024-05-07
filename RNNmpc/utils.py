@@ -200,6 +200,7 @@ def forecast_eval(
                 "beta": beta,
                 "tds": tds,
             }
+            lags = max(-np.array(tds))
             model = Forecaster.LinearForecaster(Nu=Nu, Ns=Ns, No=No, tds=tds)
             model.set_device(device)
             model.fit(
@@ -215,6 +216,7 @@ def forecast_eval(
                 "r_width": r_width,
                 "adam_lr": adam_lr,
             }
+            lags = max(-np.array(tds))
             model = Forecaster.FCForecaster(
                 Nu=Nu, Ns=Ns, No=No, tds=tds, r_list=[r_width] * 2, dropout_p=dropout_p
             )
