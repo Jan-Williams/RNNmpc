@@ -36,26 +36,11 @@ dest = args.dest
 
 ### Run throught hyperparam combinations
 hyperparam_dict = {}
-alpha_list = [
-    0.2,
-    0.4,
-]  # 0.6, 0.8]
-beta_list = [
-    1e-4,
-    1e-5,
-]  # 1e-6, 1e-7]
-sigma_list = [
-    0.005,
-    0.01,
-]  # 0.1, 0.25, 0.5]
-sigma_b_list = [
-    0.33,
-    0.66,
-]  # 1, 1.33, 1.66]
-rho_sr_list = [
-    0.2,
-    0.4,
-]  # 0.6, 0.8]
+alpha_list = [0.2, 0.4, 0.6, 0.8]
+beta_list = [1e-4, 1e-5, 1e-6, 1e-7]
+sigma_list = [0.005, 0.01, 0.1, 0.25, 0.5]
+sigma_b_list = [0.33, 0.66, 1, 1.33, 1.66]
+rho_sr_list = [0.2, 0.4, 0.6, 0.8]
 counter = 0
 esn_tot_count = (
     len(rho_sr_list)
@@ -96,20 +81,10 @@ for alpha in alpha_list:
 
 print("ESN tuning complete, starting GRU tuning.")
 
-adam_lr_list = [
-    1e-2,
-]  # 1e-3, 1e-4]
-hidden_dim_list = [
-    16,
-]  # 32, 64, 128]
-lags_list = [
-    5,
-    10,
-]  # 20, 30]
-dropout_p_list = [
-    0.0,
-    0.01,
-]  # 0.02, 0.05, 0.1]
+adam_lr_list = [1e-2, 1e-3, 1e-4]
+hidden_dim_list = [16, 32, 64, 128]
+lags_list = [5, 10, 20, 30]
+dropout_p_list = [0.0, 0.01, 0.02, 0.05, 0.1]
 lstm_tot_count = (
     len(adam_lr_list) * len(hidden_dim_list) * len(lags_list) * len(dropout_p_list)
 )
@@ -161,19 +136,10 @@ for adam_lr in adam_lr_list:
                     print(str(counter) + "/" + str(lstm_tot_count) + " LSTM complete.")
 
 
-r_width_list = [
-    10,
-    25,
-]  # 50, 75, 100]
-tds_list = [
-    1,
-]  # 5, 10, 15, 20]
-adam_lr_list = [
-    1e-2,
-]  # 1e-3, 1e-4]
-dropout_p_list = [
-    0.0,
-]  # 0.01, 0.02, 0.05, 0.1]
+r_width_list = [10, 25, 50, 75, 100]
+tds_list = [1, 5, 10, 15, 20]
+adam_lr_list = [1e-2, 1e-3, 1e-4]
+dropout_p_list = [0.0, 0.01, 0.02, 0.05, 0.1]
 fc_tot_count = (
     len(r_width_list) * len(lags_list) * len(dropout_p_list) * len(adam_lr_list)
 )
@@ -202,14 +168,8 @@ for r_width in r_width_list:
                 if counter % 50 == 0:
                     print(str(counter) + "/" + str(fc_tot_count) + " FC complete.")
 
-beta_list = [
-    0.0,
-    1e-8,
-]  # 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
-tds_list = [
-    5,
-    10,
-]  # 15, 20]
+beta_list = [0.0, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
+tds_list = [5, 10, 15, 20]
 lin_tot_count = len(beta_list) * len(lags_list)
 counter = 0
 print("FC tuning complete, starting Linear tuning.")
