@@ -220,6 +220,9 @@ else:
 if simulator == "SpringMassControl":
     tot_out = tot_out[[0, 2], :]
 
+if simulator == "CylinderControl":
+    tot_out = tot_out[0:1, :]
+
 U_train = tot_sig[:, 1:train_control_sig_len]
 S_train = tot_out[:, : train_control_sig_len - 1]
 O_train = tot_out[:, 1:train_control_sig_len]

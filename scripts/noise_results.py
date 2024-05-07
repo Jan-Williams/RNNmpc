@@ -1,10 +1,10 @@
 import RNNmpc
+import torch
 import matplotlib.pyplot as plt
 
 plt.style.use("seaborn-v0_8")
 import argparse
 import json
-import torch
 
 parser = argparse.ArgumentParser()
 
@@ -25,11 +25,11 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--train_amounts",
+    "--noise_levels",
     type=list[int],
-    help="Amounts of training data to consider to consider.",
+    help="Amount of noise to add to data.",
     required=False,
-    default=[500, 1000, 2000, 4000, 8000, 16000, 32000],
+    default=[0.0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12],
 )
 
 
@@ -37,8 +37,7 @@ args = parser.parse_args()
 best_params_dict = json.load(open(args.best_hyperparams_dict))
 data_dict = json.load(open(args.data_dict))
 
-train_amounts = args.train_amounts
-
+noise_levels = args.noise_levels
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 ### ESN
@@ -50,7 +49,7 @@ rho_sr = best_params_dict["ESNForecaster"]["rho_sr"]
 
 esn_list = []
 esn_dict = {}
-for train_amount in train_amounts:
+for noise in noise_levels:
     ret_dict, _ = RNNmpc.utils.forecast_eval(
         "ESNForecaster",
         data_dict=data_dict,
@@ -60,7 +59,7 @@ for train_amount in train_amounts:
         beta=beta,
         sigma_b=sigma_b,
         sigma=sigma,
-        train_steps=train_amount,
+        noise_level=noise,
         device=device,
     )
 
@@ -72,7 +71,7 @@ dropout_p = best_params_dict["LSTMForecaster"]["dropout_p"]
 lags = best_params_dict["LSTMForecaster"]["lags"]
 Nr = best_params_dict["LSTMForecaster"]["Nr"]
 lstm_list = []
-for train_amount in train_amounts:
+for noise in noise_levels:
     ret_dict, _ = RNNmpc.utils.forecast_eval(
         "LSTMForecaster",
         data_dict=data_dict,
@@ -81,7 +80,7 @@ for train_amount in train_amounts:
         lags=lags,
         hidden_dim=Nr,
         dropout_p=dropout_p,
-        train_steps=train_amount,
+        noise_level=noise,
         device=device,
     )
 
@@ -92,7 +91,7 @@ dropout_p = best_params_dict["GRUForecaster"]["dropout_p"]
 lags = best_params_dict["GRUForecaster"]["lags"]
 Nr = best_params_dict["GRUForecaster"]["Nr"]
 gru_list = []
-for train_amount in train_amounts:
+for noise in noise_levels:
     ret_dict, _ = RNNmpc.utils.forecast_eval(
         "GRUForecaster",
         data_dict=data_dict,
@@ -101,23 +100,24 @@ for train_amount in train_amounts:
         lags=lags,
         hidden_dim=Nr,
         dropout_p=dropout_p,
-        train_steps=train_amount,
+        noise_level=noise,
         device=device,
     )
 
     gru_list.append(ret_dict["fcast_dev"])
 
+
 beta = best_params_dict["LinearForecaster"]["beta"]
 tds = best_params_dict["LinearForecaster"]["tds"]
 lin_list = []
-for train_amount in train_amounts:
+for noise in noise_levels:
     ret_dict, _ = RNNmpc.utils.forecast_eval(
         "LinearForecaster",
         data_dict=data_dict,
         scaled=True,
         beta=beta,
         tds=tds,
-        train_steps=train_amount,
+        noise_level=noise,
         device=device,
     )
 
@@ -129,7 +129,7 @@ r_width = best_params_dict["FCForecaster"]["r_width"]
 dropout_p = best_params_dict["FCForecaster"]["dropout_p"]
 
 fc_list = []
-for train_amount in train_amounts:
+for noise in noise_levels:
     ret_dict, _ = RNNmpc.utils.forecast_eval(
         "FCForecaster",
         data_dict=data_dict,
@@ -137,22 +137,22 @@ for train_amount in train_amounts:
         r_width=r_width,
         tds=tds,
         dropout_p=dropout_p,
-        train_steps=train_amount,
+        noise_level=noise,
         device=device,
     )
 
     fc_list.append(ret_dict["fcast_dev"])
 
 fig, ax = plt.subplots()
-ax.semilogy(train_amounts, lin_list, label="DMDc", linewidth=2)
-ax.semilogy(train_amounts, fc_list, label="FCN", linewidth=2)
-ax.semilogy(train_amounts, gru_list, label="GRU", linewidth=2)
-ax.semilogy(train_amounts, lstm_list, label="LSTM", linewidth=2)
-ax.semilogy(train_amounts, esn_list, label="ESN", linewidth=2)
+ax.semilogy(noise_levels, lin_list, label="DMDc", linewidth=2)
+ax.semilogy(noise_levels, fc_list, label="FCN", linewidth=2)
+ax.semilogy(noise_levels, gru_list, label="GRU", linewidth=2)
+ax.semilogy(noise_levels, lstm_list, label="LSTM", linewidth=2)
+ax.semilogy(noise_levels, esn_list, label="ESN", linewidth=2)
 ax.tick_params(axis="both", which="major", labelsize=14)
 ax.tick_params(axis="both", which="minor", labelsize=14)
-ax.set_xlabel("Training Samples", fontsize=18)
+ax.set_xlabel("Noise, $\sigma_{STD}$", fontsize=18)
 ax.set_ylabel("Error", fontsize=18)
-ax.set_xlim([0, max(train_amounts) * 1.35])
+ax.set_xlim([0, max(noise_levels) * 1.35])
 ax.legend(fontsize=15, loc="center right")
-fig.savefig(args.dest + "/data_length.pdf")
+fig.savefig(args.dest + "/noise.pdf")

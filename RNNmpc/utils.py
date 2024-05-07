@@ -1,12 +1,15 @@
 import RNNmpc.Forecasters as Forecaster
-import json
 import torch
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
+### Note: the function forecast_eval is useful in replicating the results from
+### the paper but is likely not as useful for other applications
+
+
 def forecast_eval(
     model_type: str,
-    data_dict: str,
+    data_dict: dict,
     scaled: bool,
     alpha: float = 0.6,
     sigma: float = 0.084,
@@ -16,10 +19,12 @@ def forecast_eval(
     adam_lr: float = 0.001,
     dropout_p: float = 0.0,
     lags: int = 10,
+    tds: list = [-i for i in range(1, 11)],
     r_width: int = 50,
     hidden_dim: int = 32,
     train_steps: int = 5000,
-    noise_level = 0.0
+    noise_level=0.0,
+    device=torch.device("cpu"),
 ):
     """
     Evaluation of RNNmpc.Forecaster model on data output from generate_data.
@@ -28,8 +33,8 @@ def forecast_eval(
     -----------
     model_type: str
         class from RNNmpc.Forecasters
-    data_dict: str
-        path to data dictionary output from generate_data
+    data_dict: dict
+        dictionary containing output from generate data
     scaled: bool
         whether to MinMax scale data for training model
     alpha: float
@@ -44,8 +49,10 @@ def forecast_eval(
         learning rate for Adam algorithm, if used
     dropout_p: float
         dropout rate during training, if used
+    tds: list[int]
+        tds for the Linear or FC foercasters
     lags: int
-        lags for the RNN models or the max td to consider for Linear or FC
+        lags for the RNN models
     r_width: int
         number of nodes in hidden layers for FC models
     hidden_dim: int
@@ -58,11 +65,8 @@ def forecast_eval(
     ret_dict: dict
         dictionary containing fcast_dev and model parameters used
     tot_forecast: np.array
-        computed forecast throoughout U_valid of data_dict
+        computed forecast throughout U_valid of data_dict
     """
-
-    f = open(data_dict)
-    data_dict = json.load(f)
 
     U_train = np.array(data_dict["U_train"])[:, -train_steps:]
     for i in range(U_train.shape[0]):
@@ -122,8 +126,6 @@ def forecast_eval(
 
     fcast_steps = int(data_dict["fcast_lens"] / data_dict["control_disc"])
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     if model_type == "ESNForecaster":
         ret_dict = {
             "rho_sr": rho_sr,
@@ -173,7 +175,9 @@ def forecast_eval(
                 Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p
             )
             model.set_device(device)
-            out_r = model.fit(U_train, S_train, O_train, lags=lags, lr=adam_lr)
+            out_r = model.fit(
+                U_train, S_train, O_train, lags=lags, lr=adam_lr, num_epochs=5000
+            )
 
         elif model_type == "LSTMForecaster":
             ret_dict = {
@@ -187,20 +191,24 @@ def forecast_eval(
                 Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p
             )
             model.set_device(device)
-            out_r = model.fit(U_train, S_train, O_train, lags=lags, lr=adam_lr, num_epochs=50000)
+            out_r = model.fit(
+                U_train, S_train, O_train, lags=lags, lr=adam_lr, num_epochs=5000
+            )
 
         elif model_type == "LinearForecaster":
-            tds = [-i for i in range(1, lags + 1)]
             ret_dict = {
                 "beta": beta,
                 "tds": tds,
             }
-            tds = [-i for i in range(1, lags + 1)]
             model = Forecaster.LinearForecaster(Nu=Nu, Ns=Ns, No=No, tds=tds)
             model.set_device(device)
-            model.fit(U_train, S_train, O_train, beta=beta)
+            model.fit(
+                U_train,
+                S_train,
+                O_train,
+                beta=beta,
+            )
         else:
-            tds = [-i for i in range(1, lags + 1)]
             ret_dict = {
                 "tds": tds,
                 "dropout_p": dropout_p,
@@ -211,7 +219,7 @@ def forecast_eval(
                 Nu=Nu, Ns=Ns, No=No, tds=tds, r_list=[r_width] * 2, dropout_p=dropout_p
             )
             model.set_device(device)
-            model.fit(U_train, S_train, O_train, lr=adam_lr)
+            model.fit(U_train, S_train, O_train, lr=adam_lr, num_epochs=5000)
 
         tot_forecast = torch.zeros((No, 0)).to("cpu")
 
@@ -232,7 +240,7 @@ def forecast_eval(
         tot_forecast = sensor_scaler.inverse_transform(tot_forecast.T).T
         O_valid = sensor_scaler.inverse_transform(O_valid.T).T
 
-    fcast_dev = np.linalg.norm((tot_forecast - O_valid)) / O_valid.shape[1]
+    fcast_dev = np.mean(np.linalg.norm((tot_forecast - O_valid), axis=0))
 
     ret_dict["model_type"] = model_type
     ret_dict["simulator"] = data_dict["simulator"]
@@ -241,5 +249,6 @@ def forecast_eval(
     ret_dict["model_disc"] = data_dict["model_disc"]
     ret_dict["fcast_dev"] = fcast_dev
     ret_dict["scaled"] = scaled
+    ret_dict["noise_level"] = noise_level
 
     return ret_dict, tot_forecast

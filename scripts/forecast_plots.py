@@ -6,8 +6,6 @@ from RNNmpc.utils import forecast_eval
 
 plt.style.use("seaborn-v0_8")
 import json
-from sklearn.preprocessing import MinMaxScaler
-import RNNmpc.Forecasters as Forecaster
 
 parser = argparse.ArgumentParser()
 
@@ -32,11 +30,15 @@ parser.add_argument(
     required=True,
 )
 
+parser.add_argument("--noise_level", type=float, default=0.00, required=False)
+
 args = parser.parse_args()
-best_params_dict = args.best_hyperparams_dict
-best_params_dict = json.load(open(best_params_dict))
-data_dict = args.data_dict
+best_params_dict = json.load(open(args.best_hyperparams_dict))
+data_dict = json.load(open(args.data_dict))
+noise_level = args.noise_level
 dest = args.dest
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_steps = 5000
 
@@ -78,12 +80,15 @@ rho_sr = best_params_dict["ESNForecaster"]["rho_sr"]
 
 _, forecast_esn = forecast_eval(
     "ESNForecaster",
-    data_dict=data_dict, 
+    data_dict=data_dict,
     alpha=alpha,
     sigma_b=sigma_b,
     sigma=sigma,
     beta=beta,
-    rho_sr=rho_sr
+    rho_sr=rho_sr,
+    scaled=True,
+    noise_level=noise_level,
+    device=device,
 )
 
 O_valid = O_valid.detach().cpu().numpy()
@@ -95,9 +100,12 @@ tds = best_params_dict["LinearForecaster"]["tds"]
 
 _, forecast_linear = forecast_eval(
     "LinearForecaster",
-    data_dict=data_dict, 
+    data_dict=data_dict,
     beta=beta,
-    tds=tds
+    tds=tds,
+    noise_level=noise_level,
+    scaled=True,
+    device=device,
 )
 linear_dev_list = np.linalg.norm(forecast_linear - O_valid, axis=0)
 
@@ -110,10 +118,13 @@ dropout_p = best_params_dict["FCForecaster"]["dropout_p"]
 
 _, forecast_fc = forecast_eval(
     "FCForecaster",
-    data_dict=data_dict, 
+    data_dict=data_dict,
     adam_lr=lr,
     tds=tds,
     dropout_p=dropout_p,
+    noise_level=noise_level,
+    scaled=True,
+    device=device,
 )
 fc_dev_list = np.linalg.norm(forecast_fc - O_valid, axis=0)
 
@@ -127,11 +138,14 @@ Nr = hidden_dim
 
 _, forecast_gru = forecast_eval(
     "GRUForecaster",
-    data_dict=data_dict, 
+    data_dict=data_dict,
     adam_lr=lr,
     lags=lags,
     dropout_p=dropout_p,
-    hidden_dim=Nr
+    hidden_dim=Nr,
+    noise_level=noise_level,
+    scaled=True,
+    device=device,
 )
 gru_dev_list = np.linalg.norm(forecast_gru - O_valid, axis=0)
 
@@ -144,22 +158,30 @@ Nr = hidden_dim
 
 _, forecast_lstm = forecast_eval(
     "LSTMForecaster",
-    data_dict=data_dict, 
+    data_dict=data_dict,
     adam_lr=lr,
     lags=lags,
     dropout_p=dropout_p,
-    hidden_dim=Nr
+    hidden_dim=Nr,
+    noise_level=noise_level,
+    scaled=True,
+    device=device,
 )
 lstm_dev_list = np.linalg.norm(forecast_lstm - O_valid, axis=0)
 
-U_valid = np.array(json.load(data_dict)['U_valid'])
+U_valid = np.array(data_dict["U_valid"])
 
 
 fig, ax = plt.subplots(3)
 # fig.suptitle(data_dict['simulator'], fontsize=20)
 for ii in range(O_valid.shape[0]):
     label = "$x_{index}$"
-    ax[0].plot(t_range, (O_valid[ii] - np.mean(O_valid[ii])) / np.mean(O_valid[ii]), label=label.format(index=ii + 1), linewidth=2)
+    ax[0].plot(
+        t_range,
+        (O_valid[ii] - np.mean(O_valid[ii])) / np.std(O_valid[ii]),
+        label=label.format(index=ii + 1),
+        linewidth=2,
+    )
 for ii in range(10):
     if ii == 0:
         ax[0].axvline(
