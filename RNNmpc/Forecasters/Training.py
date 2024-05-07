@@ -16,6 +16,7 @@ def fit_rnn(
     patience: int = 5,
     train_split: float = 0.8,
     model_type: str = "GRU",
+    verbose: bool = False,
 ) -> None:
     """Function for training recurrent forecasting models.
 
@@ -37,6 +38,8 @@ def fit_rnn(
         patience for early stopping criteria
     train_split: float
         proportion of data to use in training
+    verbose: bool
+        flag to print epoch results during training
     """
     inputs = np.vstack((U, S)).T
     outputs = O.T
@@ -112,7 +115,8 @@ def fit_rnn(
                     outputs = model(valid_dataset.X.to(model.device), r_0)
                 loss = criterion(outputs, valid_dataset.Y.to(model.device))
                 loss_list.append(loss)
-                print("Epoch " + str(epoch) + ": " + str(loss.item()))
+                if verbose:
+                    print("Epoch " + str(epoch) + ": " + str(loss.item()))
                 patience_counter += 1
                 if loss == torch.tensor(loss_list).min():
                     best_params = deepcopy(model.state_dict())
@@ -133,6 +137,7 @@ def fit_fc(
     lr: float = 1e-3,
     patience: int = 5,
     train_split: float = 0.8,
+    verbose: bool = False,
 ) -> None:
     """Function for training fully connected forecasting models.
 
@@ -154,6 +159,8 @@ def fit_fc(
         patience for early stopping criteria
     train_split: float
         proportion of data to use in training
+    verbose: bool
+        flag to print epoch results during training
     """
     outputs = O.T
     N_samples = U.size(1)
@@ -204,7 +211,8 @@ def fit_fc(
                 outputs = model(valid_dataset.X.to(model.device))
                 loss = criterion(outputs, valid_dataset.Y.to(model.device))
                 loss_list.append(loss)
-                print("Epoch " + str(epoch) + ": " + str(loss.item()))
+                if verbose:
+                    print("Epoch " + str(epoch) + ": " + str(loss.item()))
                 patience_counter += 1
                 if loss == torch.tensor(loss_list).min():
                     best_params = deepcopy(model.state_dict())
