@@ -70,7 +70,6 @@ Nu = U_train.shape[0]
 Ns = S_train.shape[0]
 No = O_train.shape[0]
 fcast_steps = int(data_dict["fcast_lens"] / data_dict["control_disc"])
-t_range = np.arange(0, O_valid.shape[1], 1) * data_dict["control_disc"]
 
 ### Train ESN
 alpha = best_params_dict["ESNForecaster"]["alpha"]
@@ -178,7 +177,8 @@ results_dict = {
     'esn_dev': esn_dev_list.tolist(),
     'fc_dev': fc_dev_list.tolist(),
     'gru_dev': gru_dev_list.tolist(),
-    'lin_dev': linear_dev_list.tolist()
+    'lin_dev': linear_dev_list.tolist(),
+    'O_valid': O_valid.tolist()
 }
 
 with open(args.dest + "/forecast_results.json", "w") as fp:
