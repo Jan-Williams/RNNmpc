@@ -30,15 +30,24 @@ parser.add_argument(
     required=False
 )
 
+parser.add_argument(
+    "--device",
+    default="cpu",
+    type=str,
+    required=False,
+    help="Options: cuda:0, cuda:1, ..., cpu",
+)
+
 
 args = parser.parse_args()
 best_params_dict = json.load(open(args.best_hyperparams_dict))
 data_dict = json.load(open(args.data_dict))
 num_models = args.num_models
+device = args.device
 
 train_amounts = [500, 1000, 2000, 4000, 8000, 16000]
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device(device if torch.cuda.is_available() else "cpu")
 
 ### ESN
 alpha = best_params_dict["ESNForecaster"]["alpha"]
