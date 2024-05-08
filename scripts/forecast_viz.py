@@ -38,7 +38,8 @@ data_dict = json.load(open(args.data_dict))
 noise_level = args.noise_level
 dest = args.dest
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
 train_steps = 5000
 
@@ -171,58 +172,70 @@ lstm_dev_list = np.linalg.norm(forecast_lstm - O_valid, axis=0)
 
 U_valid = np.array(data_dict["U_valid"])
 
+results_dict = {
+    'U_valid': U_valid.tolist(),
+    'lstm_dev': lstm_dev_list.tolist(),
+    'esn_dev': esn_dev_list.tolist(),
+    'fc_dev': fc_dev_list.tolist(),
+    'gru_dev': gru_dev_list.tolist(),
+    'lin_dev': linear_dev_list.tolist()
+}
 
-fig, ax = plt.subplots(3)
-# fig.suptitle(data_dict['simulator'], fontsize=20)
-for ii in range(O_valid.shape[0]):
-    label = "$x_{index}$"
-    ax[0].plot(
-        t_range,
-        (O_valid[ii] - np.mean(O_valid[ii])) / np.std(O_valid[ii]),
-        label=label.format(index=ii + 1),
-        linewidth=2,
-    )
-for ii in range(10):
-    if ii == 0:
-        ax[0].axvline(
-            x=fcast_steps * data_dict["control_disc"] * ii,
-            linestyle="--",
-            color="k",
-            label="Intervals",
-        )
-    else:
-        ax[0].axvline(
-            x=fcast_steps * data_dict["control_disc"] * ii, linestyle="--", color="k"
-        )
-ax[0].legend(fontsize=15, loc="center right")
-ax[0].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
-ax[0].tick_params(axis="both", which="major", labelsize=14)
-ax[0].tick_params(axis="both", which="minor", labelsize=14)
+with open(args.dest + "/forecast_results.json", "w") as fp:
+    json.dump(results_dict, fp)
 
-for ii in range(U_valid.shape[0]):
-    c = "k" if ii == 0 else "tab:red"
-    label = "$u_{index}$"
-    ax[1].plot(t_range, U_valid[ii], linewidth=2, label=label.format(index=ii + 1), c=c)
-ax[0].set_ylabel("Ground Truth", fontsize=18)
 
-ax[1].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
-ax[1].set_ylabel("Control", fontsize=18)
-ax[1].legend(fontsize=15, loc="center right")
-ax[1].tick_params(axis="both", which="major", labelsize=14)
-ax[1].tick_params(axis="both", which="minor", labelsize=14)
-ax[2].semilogy(t_range, linear_dev_list, linewidth=2, label="DMDc")
-ax[2].semilogy(t_range, fc_dev_list, linewidth=2, label="FCN")
-ax[2].semilogy(t_range, gru_dev_list, linewidth=2, label="GRU")
-ax[2].semilogy(t_range, lstm_dev_list, linewidth=2, label="LSTM")
-ax[2].semilogy(t_range, esn_dev_list, linewidth=2, label="ESN")
-ax[2].legend(fontsize=15, loc="center right")
-ax[2].set_ylabel("Error", fontsize=18)
-ax[2].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
-ax[2].set_xlabel("$t$", fontsize=18)
-ax[2].set_yticks([1e-5, 1e-3, 1e-1])
-ax[2].tick_params(axis="both", which="major", labelsize=14)
-ax[2].tick_params(axis="both", which="minor", labelsize=14)
+# fig, ax = plt.subplots(3)
+# # fig.suptitle(data_dict['simulator'], fontsize=20)
+# for ii in range(O_valid.shape[0]):
+#     label = "$x_{index}$"
+#     ax[0].plot(
+#         t_range,
+#         (O_valid[ii] - np.mean(O_valid[ii])) / np.std(O_valid[ii]),
+#         label=label.format(index=ii + 1),
+#         linewidth=2,
+#     )
+# for ii in range(10):
+#     if ii == 0:
+#         ax[0].axvline(
+#             x=fcast_steps * data_dict["control_disc"] * ii,
+#             linestyle="--",
+#             color="k",
+#             label="Intervals",
+#         )
+#     else:
+#         ax[0].axvline(
+#             x=fcast_steps * data_dict["control_disc"] * ii, linestyle="--", color="k"
+#         )
+# ax[0].legend(fontsize=15, loc="center right")
+# ax[0].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
+# ax[0].tick_params(axis="both", which="major", labelsize=14)
+# ax[0].tick_params(axis="both", which="minor", labelsize=14)
 
-plt.tight_layout()
+# for ii in range(U_valid.shape[0]):
+#     c = "k" if ii == 0 else "tab:red"
+#     label = "$u_{index}$"
+#     ax[1].plot(t_range, U_valid[ii], linewidth=2, label=label.format(index=ii + 1), c=c)
+# ax[0].set_ylabel("Ground Truth", fontsize=18)
 
-fig.savefig(dest + "/forecast_plot.pdf")
+# ax[1].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
+# ax[1].set_ylabel("Control", fontsize=18)
+# ax[1].legend(fontsize=15, loc="center right")
+# ax[1].tick_params(axis="both", which="major", labelsize=14)
+# ax[1].tick_params(axis="both", which="minor", labelsize=14)
+# ax[2].semilogy(t_range, linear_dev_list, linewidth=2, label="DMDc")
+# ax[2].semilogy(t_range, fc_dev_list, linewidth=2, label="FCN")
+# ax[2].semilogy(t_range, gru_dev_list, linewidth=2, label="GRU")
+# ax[2].semilogy(t_range, lstm_dev_list, linewidth=2, label="LSTM")
+# ax[2].semilogy(t_range, esn_dev_list, linewidth=2, label="ESN")
+# ax[2].legend(fontsize=15, loc="center right")
+# ax[2].set_ylabel("Error", fontsize=18)
+# ax[2].set_xlim([-0.1, O_valid.shape[1] * data_dict["control_disc"] * 1.3])
+# ax[2].set_xlabel("$t$", fontsize=18)
+# ax[2].set_yticks([1e-3, 1e-1, 1e1])
+# ax[2].tick_params(axis="both", which="major", labelsize=14)
+# ax[2].tick_params(axis="both", which="minor", labelsize=14)
+
+# plt.tight_layout()
+
+# fig.savefig(dest + "/forecast_plot.pdf")
