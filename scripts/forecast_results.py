@@ -38,8 +38,7 @@ data_dict = json.load(open(args.data_dict))
 noise_level = args.noise_level
 dest = args.dest
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 train_steps = 5000
 
