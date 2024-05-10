@@ -26,28 +26,28 @@ dest = args.dest
 
 esn_list = np.array(noise_results['esn_list'])
 esn_mean_list = esn_list.mean(axis=1)
-esn_low_error = esn_mean_list - np.quantile(esn_list, q=0.25, axis=1)
-esn_high_error = np.quantile(esn_list, q=0.75, axis=1) - esn_mean_list
+esn_low_error = np.clip(esn_mean_list - np.quantile(esn_list, q=0.10, axis=1),0,100)
+esn_high_error = np.clip(np.quantile(esn_list, q=0.90, axis=1) - esn_mean_list,0,100)
 
 lstm_list = np.array(noise_results['lstm_list'])
 lstm_mean_list = lstm_list.mean(axis=1)
-lstm_low_error = lstm_mean_list - np.quantile(lstm_list, q=0.25, axis=1)
-lstm_high_error = np.quantile(lstm_list, q=0.75, axis=1) - lstm_mean_list
+lstm_low_error = np.clip(lstm_mean_list - np.quantile(lstm_list, q=0.10, axis=1),0, 100)
+lstm_high_error = np.clip(np.quantile(lstm_list, q=0.90, axis=1) - lstm_mean_list,0,100)
 
 gru_list = np.array(noise_results['gru_list'])
 gru_mean_list = gru_list.mean(axis=1)
-gru_low_error = gru_mean_list - np.quantile(gru_list, q=0.25, axis=1)
-gru_high_error = np.quantile(gru_list, q=0.75, axis=1) - gru_mean_list
+gru_low_error = np.clip(gru_mean_list - np.quantile(gru_list, q=0.10, axis=1),0,100)
+gru_high_error = np.clip(np.quantile(gru_list, q=0.90, axis=1) - gru_mean_list,0,100)
 
 fc_list = np.array(noise_results['fc_list'])
 fc_mean_list = fc_list.mean(axis=1)
-fc_low_error = fc_mean_list - np.quantile(fc_list, q=0.25, axis=1)
-fc_high_error = np.quantile(fc_list, q=0.75, axis=1) - fc_mean_list
+fc_low_error = np.clip(fc_mean_list - np.quantile(fc_list, q=0.10, axis=1), 0, 100)
+fc_high_error = np.clip(np.quantile(fc_list, q=0.90, axis=1) - fc_mean_list, 0, 100)
 
 lin_list = np.array(noise_results['lin_list'])
 lin_mean_list = lin_list.mean(axis=1)
-lin_low_error = np.clip(lin_mean_list - np.quantile(lin_list, q=0.25, axis=1), 0, 100)
-lin_high_error = np.quantile(lin_list, q=0.75, axis=1) - lin_mean_list
+lin_low_error = np.clip(lin_mean_list - np.quantile(lin_list, q=0.10, axis=1), 0, 100)
+lin_high_error = np.clip(np.quantile(lin_list, q=0.90, axis=1) - lin_mean_list,0,100)
 
 noise_levels = np.array(noise_results['noise_levels'])
 
