@@ -51,7 +51,7 @@ lin_high_error = np.clip(np.quantile(lin_list, q=0.90, axis=1) - lin_mean_list,0
 
 noise_levels = np.array(noise_results['noise_levels'])
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(3.2,2.9))
 
 ax.errorbar((noise_levels - 0.002)*100, lin_mean_list, yerr=(lin_low_error, lin_high_error), fmt='.', linewidth=3, markersize=15, label='DMDc')
 ax.errorbar((noise_levels - 0.001)*100, fc_mean_list, yerr=(fc_low_error, fc_high_error), fmt='.', linewidth=3, markersize=15, label='FCN')

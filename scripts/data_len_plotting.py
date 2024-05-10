@@ -51,7 +51,7 @@ lin_high_error = np.clip(np.quantile(lin_list, q=0.90, axis=1) - lin_mean_list,0
 
 train_amounts = np.array(len_results['train_amounts'])
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(3.2, 2.9))
 
 ax.errorbar(train_amounts, lin_mean_list, yerr=(lin_low_error, lin_high_error), fmt='.', linewidth=3, markersize=15, label='DMDc')
 ax.errorbar(train_amounts, fc_mean_list, yerr=(fc_low_error, fc_high_error), fmt='.', linewidth=3, markersize=15, label='FCN')
