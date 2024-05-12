@@ -58,7 +58,7 @@ ax.errorbar((noise_levels - 0.001)*100, fc_mean_list, yerr=(fc_low_error, fc_hig
 ax.errorbar((noise_levels)*100, gru_mean_list, yerr=(gru_low_error, gru_high_error), fmt='.', linewidth=5, markersize=25, label='GRU')
 ax.errorbar((noise_levels + 0.001)*100, lstm_mean_list, yerr=(lstm_low_error, lstm_high_error), fmt='.', linewidth=5, markersize=25, label='LSTM')
 ax.errorbar((noise_levels + 0.002)*100, esn_mean_list, yerr=(esn_low_error, esn_high_error), fmt='.', linewidth=5, markersize=25, label='ESN')
-ax.legend(fontsize=20, loc='lower right')
+ax.legend(fontsize=24, loc='lower right')
 ax.set_xlim([-1, max(noise_levels)*100 * 1.3])
 ax.tick_params(axis="both", which="major", labelsize=24)
 ax.tick_params(axis="both", which="minor", labelsize=24)

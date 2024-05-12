@@ -58,7 +58,7 @@ ax.errorbar(train_amounts, fc_mean_list, yerr=(fc_low_error, fc_high_error), fmt
 ax.errorbar(train_amounts, gru_mean_list, yerr=(gru_low_error, gru_high_error), fmt='.', linewidth=5, markersize=25, label='GRU')
 ax.errorbar(train_amounts, lstm_mean_list, yerr=(lstm_low_error, lstm_high_error), fmt='.', linewidth=5, markersize=25, label='LSTM')
 ax.errorbar(train_amounts, esn_mean_list, yerr=(esn_low_error, esn_high_error), fmt='.', linewidth=5, markersize=25, label='ESN')
-ax.legend(fontsize=14, loc='center right')
+ax.legend(fontsize=24, loc='center right')
 ax.set_xlim([300, max(train_amounts * 5)])
 ax.tick_params(axis="both", which="major", labelsize=24)
 ax.tick_params(axis="both", which="minor", labelsize=24)
