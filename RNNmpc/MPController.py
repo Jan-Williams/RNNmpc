@@ -80,7 +80,6 @@ class MPController:
         cost += self.u_1 * torch.linalg.norm(U)
         cost += self.u_2 * torch.linalg.norm(torch.diff(U))
         cost += self.u_2 * torch.linalg.norm(U[:,0] - U_last[:, -1])
-        print(cost)
         return cost
     
     def compute_act(
@@ -115,7 +114,7 @@ class MPController:
             control action to minimize objective fn, dims (Nu, fcast_len)
         """
         lbfgs = torch.optim.LBFGS(
-            [U], history_size=15, max_iter=1000, line_search_fn="strong_wolfe",
+            [U], history_size=10, max_iter=100, line_search_fn="strong_wolfe",
         )
         if isinstance(self.forecaster, Forecasters.ESNForecaster):
             r_k = kwargs['r_k']
