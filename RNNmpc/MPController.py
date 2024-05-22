@@ -24,7 +24,7 @@ class MPController:
         compute actuation to minimize objective function
     """
 
-    def __init__(self, forecaster, dev, u_1, u_2) -> None:
+    def __init__(self, forecaster, dev, u_1, u_2, soft_bounds=(0,1), hard_bounds=(-0.2, 1.2)) -> None:
         """
         Parameters:
         ----------
@@ -41,6 +41,8 @@ class MPController:
         self.dev = dev
         self.u_1 = u_1
         self.u_2 = u_2
+        self.soft_bounds = soft_bounds
+        self.hard_bounds = hard_bounds
 
     def objective_fn(
         self,
@@ -48,7 +50,6 @@ class MPController:
         ref_vals: torch.DoubleTensor,
         s_k: torch.DoubleTensor,
         U_last: torch.DoubleTensor,
-        bounds: tuple = None,
         **kwargs,
     ) -> torch.DoubleTensor:
         """Compute objective function cost.
@@ -69,7 +70,6 @@ class MPController:
             else:
                 specify U_spin, S_spin
         """
-
         if isinstance(self.forecaster, Forecasters.ESNForecaster):
             r_k = kwargs["r_k"]
             fcast = self.forecaster.forecast(U=U, r_k=r_k, s_k=s_k)
@@ -82,10 +82,8 @@ class MPController:
         cost += self.u_1 * torch.linalg.norm(U)
         cost += self.u_2 * torch.linalg.norm(torch.diff(U))
         cost += self.u_2 * torch.linalg.norm(U[:, 0] - U_last[:, -1])
-        if bounds is not None:
-            cost += torch.linalg.norm(
-                (2 * ((U - bounds[0]) / (bounds[1] - bounds[0])) - 1) ** 8 * 5
-            )
+        cost += torch.linalg.norm(U.clamp(min=self.soft_bounds[1]) - self.soft_bounds[1]) ** 2 * 100
+        cost += torch.linalg.norm(U.clamp(max=self.soft_bounds[0]) - self.soft_bounds[0]) ** 2 * 100
         return cost
 
     def compute_act(
@@ -94,7 +92,6 @@ class MPController:
         ref_vals: torch.DoubleTensor,
         s_k: torch.DoubleTensor,
         U_last: torch.DoubleTensor,
-        bounds: tuple = None,
         **kwargs,
     ) -> torch.DoubleTensor:
         """Compute control action
@@ -136,7 +133,6 @@ class MPController:
                     s_k=s_k,
                     ref_vals=ref_vals,
                     U_last=U_last,
-                    bounds=bounds,
                 )
                 objective.backward()
                 return objective
@@ -154,17 +150,14 @@ class MPController:
                     U_spin=U_spin,
                     ref_vals=ref_vals,
                     U_last=U_last,
-                    bounds=bounds,
                 )
                 objective.backward()
                 return objective
 
         lbfgs.step(closure)
-        # print(U)
-        # if bounds is not None:
-        #     with torch.no_grad():
-        #         U = U[:,:].clamp(bounds[0], bounds[1]).clone()
-        # print(U)
+        if self.hard_bounds is not None:
+            with torch.no_grad():
+                U = U[:,:].clamp(self.hard_bounds[0], self.hard_bounds[1]).clone()
         return U
 
         # adam = torch.optim.Adam(
