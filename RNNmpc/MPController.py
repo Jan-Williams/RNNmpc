@@ -36,6 +36,10 @@ class MPController:
             control penalty for magnitude of control input
         u_2: float
             control penalty for magnitude of control input derivative
+        soft_bounds: tuple
+            soft bounds for penalization
+        hard_bounds: tuple
+            hard bounds for control
         """
         self.forecaster = forecaster
         self.dev = dev
