@@ -209,7 +209,7 @@ if cont_results_1['sim'] == 'StirredTankControl':
     plt.savefig('stirred_tank_control.pdf')
 
 if cont_results_1['sim'] == 'LorenzControl':
-    t_range = np.arange(0,1600) * 0.1
+    t_range = np.arange(0,1600) * 0.01
     fig, ax = plt.subplots(4, figsize=(6.5, 4.5))
     ax[0].plot(t_range[:1300], cont_results_1['ref_traj'][0][:1300], linewidth=2, c='k', label='Reference')
     ax[0].plot(t_range[:1300], cont_results_1['S_controlled'][0][:1300] ,'--', linewidth=2, label='ESN')
@@ -279,4 +279,56 @@ if cont_results_1['sim'] == 'LorenzControl':
         labelbottom=False)
 
     plt.tight_layout()
-    plt.savefig('lorenz_control_2.pdf')
+    plt.savefig('lorenz_control_test.pdf')
+
+
+if cont_results_1['sim'] == 'CylinderControl':
+    t_range = np.arange(0,1600) * 0.1
+    fig, ax = plt.subplots(2, figsize=(6.5, 4.5))
+    ax[0].plot(t_range[:1300], cont_results_1['ref_traj'][0][:1300], linewidth=2, c='k', label='Reference')
+    ax[0].plot(t_range[:1300], cont_results_1['S_controlled'][0][:1300] ,'--', linewidth=2, label='ESN')
+    ax[0].plot(t_range[:1300], cont_results_2['S_controlled'][0][:1300] ,'--', linewidth=2, label='ESN')
+    # ax[0].plot(t_range[:1300], lstm_results['S_controlled'][0][:1300] ,'--', linewidth=2, label='LSTM')
+
+    # ax[1].plot(t_range, lstm_results['S_controlled'][1] ,'--', linewidth=2, label='LSTM')
+
+
+    # ax[2].plot(t_range, cont_results['ref_traj'][2][:1600], linewidth=2, c='k')
+    # ax[2].plot(t_range, cont_results['S_controlled'][2] ,'--', linewidth=2, label='ESN')
+    # ax[2].plot(t_range, lstm_results['S_controlled'][2] ,'--', linewidth=2, label='LSTM')
+
+
+    ax[1].plot(t_range, cont_results_1['U'][0], '--', linewidth=2, label='ESN')
+    ax[1].plot(t_range, cont_results_2['U'][0], '--', linewidth=2, label='ESN')
+    # ax[2].plot(t_range, cont_results['U'][1], '--', linewidth=2, label='ESN')
+    # ax[3].plot(t_range, lstm_results['U'][0], '--', linewidth=2, label='LSTM')
+
+    ax[0].tick_params(axis="both", which="minor", labelsize=12)
+    ax[1].tick_params(axis="both", which="minor", labelsize=12)
+
+    # ax[3].tick_params(axis="both", which="minor", labelsize=12)
+
+
+    ax[0].set_ylabel('$x_1$', fontsize=12)
+    ax[1].set_ylabel('$u$', fontsize=12)
+
+    ax[1].set_xlabel("Time, $t$", fontsize=12)
+
+    ax[0].legend(fontsize=10, loc="upper right")
+    x_lims = ax[1].get_xlim()
+    ax[0].set_xlim(x_lims)
+    ax[0].tick_params(
+        axis='x',          # changes apply to the x-axis
+        which='both',      # both major and minor ticks are affected
+        bottom=False,      # ticks along the bottom edge are off
+        top=False,         # ticks along the top edge are off
+        labelbottom=False)
+    # ax[1].tick_params(
+    #     axis='x',          # changes apply to the x-axis
+    #     which='both',      # both major and minor ticks are affected
+    #     bottom=False,      # ticks along the bottom edge are off
+    #     top=False,         # ticks along the top edge are off
+    #     labelbottom=False)
+
+    plt.tight_layout()
+    plt.savefig('cyl_control_test.pdf')

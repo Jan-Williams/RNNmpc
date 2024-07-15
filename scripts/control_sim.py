@@ -6,6 +6,7 @@ from RNNmpc import Forecasters
 from RNNmpc import Simulators
 from sklearn.preprocessing import MinMaxScaler
 from RNNmpc import MPController
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 
@@ -203,7 +204,25 @@ elif sim == "SpringMassControl":
     s_k_scaled = O_train_scaled[:,-1:]
     s_k = torch.tensor(O_train[:,-1:])
 
-
+elif sim == "CylinderControl":
+    Nu = 1
+    Ns = 1
+    No = 1
+    ref_traj1 = np.zeros((1, 500))
+    ref_traj2 = np.ones((1,500)) * 0
+    ref_traj3 = np.ones((1,700)) * 0 
+    ref_traj = np.hstack((ref_traj1, ref_traj2, ref_traj3))
+    ref_traj_scaled = torch.tensor(sensor_scaler.transform(ref_traj.T).T)
+    restart = '/home/jmpw1/Documents/Control/rc-mpc/transient_run.h5'
+    print('done')
+    sim = Simulators.CylinderControl(model_disc=0.0025, control_disc=0.1, restart=restart)
+    X_out = sim.simulate(torch.zeros(1,633))[0:1,:]
+    fig1, ax1 = plt.subplots(1)
+    ax1.plot(X_out[0].detach().numpy())
+    plt.savefig('temptestspinup.pdf')
+    print('done')
+    s_k = X_out[:, -1:]
+    s_k_scaled = torch.tensor(sensor_scaler.transform(X_out[:,-1:].detach().numpy().T).T, dtype=torch.float64)
 else:
     raise ValueError("Invalid sim environment.")
 
@@ -282,6 +301,10 @@ if model_type == 'ESNForecaster':
         s_k_scaled = torch.tensor(sensor_scaler.transform(np.array([[0], [0]]).T).T)
         s_k = torch.tensor([[0],[0]], dtype=torch.float64)
         x_k = torch.tensor([[0], [0], [0], [0]], dtype=torch.float64)
+    if isinstance(sim, Simulators.CylinderControl):
+        X_out_scaled = sensor_scaler.transform(X_out.detach().numpy().T).T
+        X_out_scaled = torch.tensor(X_out_scaled)
+        r_k = model.spin(U_spin=torch.ones_like(X_out_scaled) * 0.5, S_spin=X_out_scaled)
     else:
         s_k_scaled = O_train_scaled[:,-1:]
         s_k = torch.tensor(O_train[:,-1:])
@@ -321,6 +344,8 @@ if model_type == 'ESNForecaster':
         if isinstance(sim, Simulators.SpringMassControl):
             x_k = sim.simulate(U=u_k, x0=x_k)
             s_k = x_k[[0,2],:]
+        elif isinstance(sim, Simulators.CylinderControl):
+            s_k = sim.simulate(U=u_k)[0:1, :]
         else:
             s_k = sim.simulate(U=u_k, x0=s_k)
         s_k_scaled = sensor_scaler.transform(s_k.detach().numpy().T).T
@@ -404,5 +429,5 @@ ret_dict = {
     "U": U_list.detach().numpy().tolist(),
 }
 
-with open(args.dest + "/control_results_" + model_type + ".json", "w") as fp:
+with open(args.dest + "/control_results_cyl_2" + model_type + ".json", "w") as fp:
     json.dump(ret_dict, fp)

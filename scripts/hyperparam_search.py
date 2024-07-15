@@ -224,5 +224,5 @@ ret_dict = {
     "LinearForecaster": lin_out,
     "FCForecaster": fc_out,
 }
-with open(dest + "/best_hyperparams.json", "w") as fp:
+with open(dest + "/best_hyperparams_lift.json", "w") as fp:
     json.dump(ret_dict, fp)

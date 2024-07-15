@@ -27,8 +27,8 @@ dest = args.dest
 
 esn_list = np.array(len_results['esn_list'])
 esn_mean_list = esn_list.mean(axis=1)
-esn_low_error = esn_mean_list - np.quantile(esn_list, q=0.10, axis=1)
-esn_high_error = np.quantile(esn_list, q=0.90, axis=1) - esn_mean_list
+esn_low_error = np.clip(esn_mean_list - np.quantile(esn_list, q=0.10, axis=1), 0, 100)
+esn_high_error = np.clip(np.quantile(esn_list, q=0.90, axis=1) - esn_mean_list, 0, 100)
 
 lstm_list = np.array(len_results['lstm_list'])
 lstm_mean_list = lstm_list.mean(axis=1)

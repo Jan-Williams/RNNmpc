@@ -164,14 +164,13 @@ elif simulator == "CylinderControl":
     sim = Simulators.CylinderControl(
         model_disc=model_disc,
         control_disc=control_disc,
-        restart=restart,
     )
     Nu = 1
     Ns = 2
     No = 2
     amplitudes = [0, 0.33, 0.66, 1, 1.33]
-    dist_min = -np.pi / 2
-    dist_max = np.pi / 2
+    dist_min = -0.1
+    dist_max = 0.1
     fcast_freq = 2
 
 
@@ -213,6 +212,9 @@ for amp in range(len(amplitudes)):
     tot_sig = torch.hstack((tot_sig, temp_const_sig, temp_sin_sig))
 
 if simulator == "CylinderControl":
+    temp_out = sim.simulate(torch.zeros((1, 15000)))
+    sim.env.flow.save_checkpoint('./tmp.h5')
+    print(sim.env)
     tot_out = sim.simulate(tot_sig)
 else:
     tot_out = sim.simulate(tot_sig, x0)
@@ -221,7 +223,7 @@ if simulator == "SpringMassControl":
     tot_out = tot_out[[0, 2], :]
 
 if simulator == "CylinderControl":
-    tot_out = tot_out[0:1, :]
+    tot_out = tot_out[0:2, :]
 
 U_train = tot_sig[:, 1:train_control_sig_len]
 S_train = tot_out[:, : train_control_sig_len - 1]
