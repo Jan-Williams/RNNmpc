@@ -71,3 +71,14 @@ Monica teaches advanced control systems and uses the package to demonstrate the 
 1. Functionality to flexibly generate data for a system of interest. The user provides details about the ODEs or PDEs that govern their system of interest, and the code provides an object that simulates the system while providing a consistent interface for subsequent model training and control evaluation.
 
 2. The implied user is a future developer who wants to perform research of their own introducing new network architectures or methods for minimizing the MPC objective function. As a result, the code needs to have good developer documentation in addition to user docs.
+
+3. Custom Dynamics and Constraints: Support user-defined system dynamics and constraints (e.g., ODEs, PDEs, safety thresholds).
+
+4. Real-Time and High-Dimensional Systems: Handle real-time data streaming for control updates. Manage high-dimensional state spaces and interactions with external simulation tools.
+
+5. Integration and Compatibility: Provide interfaces to integrate with tools like MATLAB, TensorFlow, and domain-specific APIs.
+Combine data-driven models with physics-based approaches for hybrid system modeling.
+
+6. Robustness and Noise Handling: Include preprocessing tools like Kalman filters to ensure robustness against noisy inputs.
+
+7. Educational and Visualization Tools: Offer user-friendly visualizations for state trajectories, control actions, and model predictions. Provide pre-built examples for teaching and quick adoption.
