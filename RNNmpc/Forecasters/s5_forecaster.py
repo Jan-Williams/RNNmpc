@@ -82,17 +82,19 @@ class S5Layer(torch.nn.Module):
         """Compute discrete representation from continuous parameters via ZOH.
         """
         identity = torch.ones(lambda_vec.shape[0])
-        identity = torch.ones(lambda_vec.shape[0])
         lambda_bar = torch.exp(lambda_vec * delta)
         b_bar = (1 / lambda_vec * (lambda_bar - identity))[..., None] * b_mat
         return lambda_bar, b_bar
 
-    def forward(self, u_input, delta):
+    def forward(self, u_input, delta, x0=None):
         lambda_bar, b_bar = self.discretize(self.lambda_vec, self.b_mat, delta)
-        x = torch.zeros((u_input.shape[0], self.n_hidden, 1))
+        if x0 is None:
+            x = torch.zeros((u_input.shape[1], self.n_hidden))
+        else:
+            x = x0
         output = []
-        for idx in range(u_input.shape[2]):
-            x = lambda_bar * x + b_bar @ u_input[:, idx]
+        for idx in range(u_input.shape[0]):
+            x = lambda_bar * x + (b_bar @ u_input[idx, :, :].T).T
             output.append(x)
         output = torch.stack(output, dim=0)
         return output 
