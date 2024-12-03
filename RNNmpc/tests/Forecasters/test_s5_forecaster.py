@@ -33,4 +33,19 @@ def test_forward_exp_decay():
      for idx in range(hidden_dim):
           explicit_solns.append(np.exp(model.lambda_vec[idx].detach().numpy()*t))
      np.testing.assert_allclose(test_output[:,0,:], np.array(explicit_solns).T)
+
+def test_forward_input():
+     hidden_dim = 20
+     input_dim = 10
      
+
+def test_forward_dims():
+     hidden_dim = 20
+     input_dim = 5
+     batch_size = 10
+     seq_len = 25
+     model = RNNmpc.Forecasters.s5_forecaster.S5Layer(input_dim, hidden_dim)
+     test_input = torch.ones((seq_len, batch_size, input_dim), dtype=torch.complex128)
+     delta = 0.5
+     test_output = model.forward(test_input, delta)
+     assert test_output.shape == (seq_len, batch_size, hidden_dim)
