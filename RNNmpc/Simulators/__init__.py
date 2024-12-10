@@ -1,4 +1,4 @@
-from .CylinderControl import CylinderControl
+# from .CylinderControl import CylinderControl
 from .LorenzControl import LorenzControl
 from .SpringMassControl import SpringMassControl
 from .StirredTankControl import StirredTankControl
