@@ -1,4 +1,4 @@
-name: rnn-mpc5
+name: rnn-mpc
 
 dependencies:
   - python=3.10.6
