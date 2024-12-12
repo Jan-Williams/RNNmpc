@@ -255,7 +255,7 @@ def train_model(
             data[0] = torch.swapaxes(data[0], 0, 1)
             data[1] = torch.swapaxes(data[1], 0, 1)
 
-            outputs = model(data[0], model.delta)
+            outputs = model.forward(data[0], model.delta)
             optimizer.zero_grad()
 
             loss = criterion(outputs, data[1].real)
@@ -264,14 +264,14 @@ def train_model(
         with torch.no_grad():
             print("Epoch: " + str(epoch))
             criterion(
-                model(valid_dataset.x_in, model.delta),
+                model.forward(valid_dataset.x_in, model.delta),
                 valid_dataset.y_out.real
             )
             print(
                 "Val. Loss: "
                 + str(
                     criterion(
-                        model(valid_dataset.x_in, model.delta),
+                        model.forward(valid_dataset.x_in, model.delta),
                         valid_dataset.y_out.real,
                     ).item()
                 )
@@ -319,7 +319,7 @@ def train_step(
         data[0] = torch.swapaxes(data[0], 0, 1)
         data[1] = torch.swapaxes(data[1], 0, 1)
 
-        outputs = model(data[0], model.delta)
+        outputs = model.forward(data[0], model.delta)
         optimizer.zero_grad()
 
         loss = criterion(outputs, data[1].real)
