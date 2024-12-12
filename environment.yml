@@ -5,6 +5,7 @@ dependencies:
   - numpy=1.23
   - scipy
   - pytest
+  - matplotlib
   - pip
   - pip:
     - flake8
