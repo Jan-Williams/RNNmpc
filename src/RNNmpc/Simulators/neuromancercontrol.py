@@ -5,7 +5,7 @@ from copy import deepcopy
 import json
 
 
-class neuromancerControl:
+class NeuromancerControl:
     """Simulation object for stirred tank system.
 
     Attributes:

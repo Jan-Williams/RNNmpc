@@ -4,7 +4,7 @@ import scipy.integrate
 from copy import deepcopy
 
 
-class odeControl:
+class OdeControl:
     """Simulation object for ODE systems.
 
     Attributes:
