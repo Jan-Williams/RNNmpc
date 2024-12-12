@@ -131,5 +131,3 @@ def test_oneshot():
     error = error.numpy()
 
     assert np.any(error < 1e-8)
-
-test_generate_data()
