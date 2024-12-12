@@ -50,7 +50,9 @@ class S5Layer(torch.nn.Module):
 
     def init_lambda(self):
         """Initialization of lambda parameter and associated eigenvectors."""
-        hippo = torch.zeros((self.n_hidden, self.n_hidden), dtype=torch.complex128)
+        hippo = torch.zeros(
+            (self.n_hidden, self.n_hidden), dtype=torch.complex128
+        )
         for row in range(self.n_hidden):
             for col in range(self.n_hidden):
                 if row == col:
@@ -89,7 +91,7 @@ class S5Layer(torch.nn.Module):
         b_mat: torch.nn.parameter.Parameter,
         delta: float,
     ):
-        """Compute discrete representation from continuous parameters via ZOH."""
+        """Compute discrete matrices from continuous parameters via ZOH."""
         identity = torch.ones(lambda_vec.shape[0])
         lambda_bar = torch.exp(lambda_vec * delta)
         b_bar = (1 / lambda_vec * (lambda_bar - identity))[..., None] * b_mat
@@ -105,16 +107,21 @@ class S5Layer(torch.nn.Module):
         delta: float
             discretization of zero order hold
         x0: torch.cdouble
-            initial latent state, defaults to zeros, shape (batch_size, n_hidden)
+            initial latent state, defaults to zeros, shape
+            (batch_size, n_hidden)
         """
         if x0 is None:
-            x = torch.zeros((u_input.shape[1], self.n_hidden), dtype=torch.complex128)
+            x = torch.zeros(
+                (u_input.shape[1], self.n_hidden), dtype=torch.complex128
+            )
         else:
             x = x0
         if u_input.dtype is not torch.complex128:
             raise TypeError("u_input must be complex double tensor.")
         if len(u_input.shape) != 3:
-            raise ValueError("u_input must have shape (seq_len, batch_size, n_in)")
+            raise ValueError(
+                "u_input must have shape (seq_len, batch_size, n_in)"
+            )
         if x.dtype is not torch.complex128:
             raise TypeError("x0 must be complex double tensor.")
         if len(x.shape) != 2:
@@ -147,7 +154,8 @@ class S5Forecaster(torch.nn.Module):
     layer_list: torch.nn.ModuleList
         list containing each S5 layer
     output_layer: torch.nn.Linear
-        linear output layer mapping from final sequence of hidden states to forecast
+        linear output layer mapping from final sequence of hidden states to
+        forecast
     delta: float
         discretization used for zero order hold
     """
@@ -158,7 +166,8 @@ class S5Forecaster(torch.nn.Module):
         Parameters:
         -----------
         params: tuple
-            (n_in: int, n_hidden: int, num_layers: int, fcast_steps: int, delta: float)
+            (n_in: int, n_hidden: int, num_layers: int, fcast_steps: int,
+            delta: float)
         """
         super().__init__()
         self.n_in = params[0]
@@ -185,7 +194,8 @@ class S5Forecaster(torch.nn.Module):
         delta: float
             discretization of zero order hold
         x0: torch.cdouble
-            initial latent state, defaults to zeros, shape (num_layers, batch_size, n_hidden)
+            initial latent state, defaults to zeros, shape
+            (num_layers, batch_size, n_hidden)
         """
         if x0 is None:
             x = torch.zeros(
@@ -198,7 +208,9 @@ class S5Forecaster(torch.nn.Module):
         if u_input.dtype is not torch.complex128:
             raise TypeError("u_input must be complex double tensor.")
         if len(u_input.shape) != 3:
-            raise ValueError("u_input must have shape (seq_len, batch_size, n_in)")
+            raise ValueError(
+                "u_input must have shape (seq_len, batch_size, n_in)"
+            )
         if x.dtype is not torch.complex128:
             raise TypeError("latent states x must be complex double tensor.")
         if len(x.shape) != 3:
@@ -213,7 +225,7 @@ class S5Forecaster(torch.nn.Module):
                 torch.nn.functional.gelu(u_input.imag),
             )
 
-        output = self.output_layer(u_input[-self.fcast_steps :].real)
+        output = self.output_layer(u_input[-self.fcast_steps:].real)
 
         return output
 
@@ -228,7 +240,9 @@ def train_model(
     """Train S5Forecaster model."""
     optimizer = torch.optim.Adam(model.parameters(), lr)
     criterion = torch.nn.MSELoss()
-    train_dataset, valid_dataset = train_val_split(ts_data, lags, model.fcast_steps)
+    train_dataset, valid_dataset = train_val_split(
+        ts_data, lags, model.fcast_steps
+    )
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, shuffle=True, batch_size=64
@@ -249,12 +263,16 @@ def train_model(
             optimizer.step()
         with torch.no_grad():
             print("Epoch: " + str(epoch))
-            criterion(model(valid_dataset.x_in, model.delta), valid_dataset.y_out.real)
+            criterion(
+                model(valid_dataset.x_in, model.delta),
+                valid_dataset.y_out.real
+            )
             print(
                 "Val. Loss: "
                 + str(
                     criterion(
-                        model(valid_dataset.x_in, model.delta), valid_dataset.y_out.real
+                        model(valid_dataset.x_in, model.delta),
+                        valid_dataset.y_out.real,
                     ).item()
                 )
             )
@@ -274,8 +292,8 @@ def train_val_split(ts_data: torch.Tensor, lags: int, fcast_steps: int):
     all_out = np.zeros((fcast_steps, n_retained, ts_data.size(0)))
 
     for idx in range(n_retained):
-        all_in[:, idx, :] = ts_data[:, idx : idx + lags].T
-        all_out[:, idx, :] = ts_data[:, idx + lags : idx + lags + fcast_steps].T
+        all_in[:, idx, :] = ts_data[:, idx: idx + lags].T
+        all_out[:, idx, :] = ts_data[:, idx + lags: idx + lags + fcast_steps].T
 
     train_dataset = SeriesDataset(
         torch.tensor(all_in[:, train_indices, :], dtype=torch.complex128),
