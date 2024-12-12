@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from utils import closed_loop_sim 
+from RNNmpc.utils import closed_loop_sim 
 
 class TestClosedLoopSim(unittest.TestCase):
 
