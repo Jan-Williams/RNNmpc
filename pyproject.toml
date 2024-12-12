@@ -18,7 +18,6 @@ dependencies = [
     "matplotlib",
     "torch",
     "control",
-    "slycot",
     "pytest",
     "flake8",
 ] 
