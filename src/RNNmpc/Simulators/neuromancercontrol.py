@@ -1,8 +1,8 @@
-from neuromancer import psl
+"""Simulator class for neuromancer nonautonomous library"""
+from copy import deepcopy
 import numpy as np
 import torch
-from copy import deepcopy
-import json
+
 
 
 class NeuromancerControl:
@@ -98,11 +98,10 @@ class NeuromancerControl:
             X_list[:, step : step + 1] = x0
         X_list = torch.tensor(X_list, dtype=torch.float64)
         return X_list
-    
 
-    
+
     def generate_data(self, train_len: float, switching_period: float,
-                      filter_len: int, dist_min: float, dist_max: float,
+                      dist_min: float, dist_max: float,
                       train_percentage: float):
         """Generate random trajectories for training a neural network
 
@@ -112,8 +111,6 @@ class NeuromancerControl:
             length of training data in seconds
         switching_period: float
             Time interval between control changes in training input
-        filter_len: int
-            Width of smoothing filter applied to control signal
         dist_min: float
             Minimum value of initial states
         dist_max: float
@@ -163,7 +160,8 @@ class NeuromancerControl:
         tot_sig = deepcopy(train_control_sig)
         tot_sig = tot_sig.reshape([self.nu,-1])
         tot_out = self.simulate(tot_sig,torch.DoubleTensor(self.default_x0))
-        
+
+        #sort outputs between training and state_k,state_k+1,and controls
         U_train = tot_sig[:, :train_control_sig_len]
         S_train = tot_out[:, :train_control_sig_len]
         O_train = tot_out[:, 1:train_control_sig_len + 1]
@@ -179,15 +177,10 @@ class NeuromancerControl:
             "S_valid": S_valid.detach().numpy().tolist(),
             "O_train": O_train.detach().numpy().tolist(),
             "O_valid": O_valid.detach().numpy().tolist(),
-            #"simulator": simulator, #should this be returned???
             "train_len": train_len,
-            #"fcast_lens": fcast_lens,
             "switching_period": switching_period,
             "model_disc": self.model_disc,
-            "control_disc": self.control_disc,
-            "filter_len": filter_len,
+            "control_disc": self.control_disc
         }
 
         return return_dict
-        #with open(dest + "/data.json", "w+") as fp:
-        #    json.dump(return_dict, fp)
