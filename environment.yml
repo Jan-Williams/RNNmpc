@@ -1,0 +1,13 @@
+name: rnn-mpc
+
+dependencies:
+  - python=3.10.6
+  - numpy=1.23
+  - scipy
+  - pytest
+  - matplotlib
+  - pip
+  - pip:
+    - flake8
+    - control
+    - neuromancer

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+
+
+name = "RNNmpc"
+
+
+requires-python = ">= 3.10, < 3.11"
+
+dependencies = [
+	"numpy>= 1.22, < 1.24",
+    "scipy",
+    "neuromancer",
+    "matplotlib",
+    "torch",
+    "control",
+    "pytest",
+    "flake8",
+] 
+
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools_scm]

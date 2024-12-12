@@ -1,4 +1,6 @@
 import RNNmpc.Forecasters as Forecaster
+import RNNmpc.Simulators as Simulator
+from RNNmpc import MPController
 import torch
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
@@ -254,3 +256,197 @@ def forecast_eval(
     ret_dict["noise_level"] = noise_level
 
     return ret_dict, tot_forecast
+
+def closed_loop_sim(environment, reference_trajectory, model_type, train_data, hyperparams, control_params):
+    """
+    Perform a closed-loop simulation using MPC and a surrogate model.
+
+    Args:
+        environment (str): Simulation environment (e.g., 'LorenzControl', 'TwoTankControl').
+        reference_trajectory (np.ndarray): Desired reference trajectory for the system.
+        model_type (str): Type of surrogate model (e.g., 'LSTMForecaster', 'GRUForecaster').
+        train_data (dict): Dictionary containing 'U_train', 'S_train', and 'O_train'.
+        hyperparams (dict): Dictionary of hyperparameters for the chosen forecaster.
+        control_params (dict): Parameters for the controller and simulation.
+
+    Returns:
+        dict: A dictionary containing results of the controlled simulation.
+
+    Raises:
+        ValueError: If inputs are invalid or unsupported configurations are detected.
+    """
+
+    # Validate inputs
+    valid_environments = ["LorenzControl", "TwoTankControl", "StirredTankControl", "SpringMassControl"]
+    if environment not in valid_environments:
+        raise ValueError(
+            f"Invalid environment '{environment}'. Supported environments: {valid_environments}"
+        )
+
+    valid_models = ["LSTMForecaster", "GRUForecaster", "LinearForecaster", "FCForecaster", "ESNForecaster"]
+    if model_type not in valid_models:
+        raise ValueError(
+            f"Invalid model type '{model_type}'. Supported models: {valid_models}"
+        )
+
+    if not isinstance(reference_trajectory, np.ndarray):
+        raise TypeError("reference_trajectory must be a NumPy array.")
+
+    if not isinstance(train_data, dict) or not all(key in train_data for key in ["U_train", "S_train", "O_train"]):
+        raise ValueError(
+            "train_data must be a dictionary containing keys: 'U_train', 'S_train', and 'O_train'."
+        )
+
+    if not isinstance(hyperparams, dict):
+        raise TypeError("hyperparams must be a dictionary.")
+
+    if not isinstance(control_params, dict):
+        raise TypeError("control_params must be a dictionary.")
+
+    # Ensure control_params has required keys
+    required_control_keys = ["dev", "u_1", "u_2", "control_horizon", "forecast_horizon"]
+    for key in required_control_keys:
+        if key not in control_params:
+            raise ValueError(f"Missing control parameter: '{key}' in control_params.")
+
+    # Initialize scalers
+    sensor_scaler = MinMaxScaler()
+    control_scaler = MinMaxScaler()
+
+    # Extract and validate training data
+    try:
+        U_train = np.array(train_data['U_train'])
+        S_train = np.array(train_data['S_train'])
+        O_train = np.array(train_data['O_train'])
+    except KeyError as e:
+        raise ValueError(f"Missing required key in train_data: {e}")
+    except Exception as e:
+        raise ValueError(f"Error processing training data: {e}")
+
+    # Ensure training data dimensions match
+    if U_train.ndim != 2 or S_train.ndim != 2 or O_train.ndim != 2:
+        raise ValueError("Training data must be 2D arrays.")
+
+    control_scaler.fit(U_train.T)
+    sensor_scaler.fit(S_train.T)
+
+    U_train_scaled = torch.tensor(control_scaler.transform(U_train.T).T, dtype=torch.float64)
+    S_train_scaled = torch.tensor(sensor_scaler.transform(S_train.T).T, dtype=torch.float64)
+    O_train_scaled = torch.tensor(sensor_scaler.transform(O_train.T).T, dtype=torch.float64)
+
+    # Initialize simulation environment
+    try:
+        if environment == "LorenzControl":
+            sim = Simulator.LorenzControl(control_disc=0.01)
+        elif environment == "TwoTankControl":
+            sim = Simulator.TwoTankControl()
+        elif environment == "StirredTankControl":
+            sim = Simulator.StirredTankControl()
+        elif environment == "SpringMassControl":
+            sim = Simulator.SpringMassControl(model_disc=0.1, control_disc=0.1)
+        else:
+            raise ValueError("Invalid simulation environment.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize simulation environment: {e}")
+
+    ref_traj_scaled = torch.tensor(sensor_scaler.transform(reference_trajectory.T).T, dtype=torch.float64)
+
+    # Determine simulation dimensions
+    try:
+        Nu, Ns, No = sim.input_output_dims()
+    except Exception as e:
+        raise RuntimeError(f"Failed to determine simulation dimensions: {e}")
+
+    # Initialize forecaster model
+    try:
+        if model_type == "LSTMForecaster":
+            model = Forecaster.LSTMForecaster(
+                Nr=hyperparams['Nr'], Nu=Nu, Ns=Ns, No=No, dropout_p=hyperparams['dropout_p']
+            )
+        elif model_type == "GRUForecaster":
+            model = Forecaster.GRUForecaster(
+                Nr=hyperparams['Nr'], Nu=Nu, Ns=Ns, No=No, dropout_p=hyperparams['dropout_p']
+            )
+        elif model_type == "LinearForecaster":
+            model = Forecaster.LinearForecaster(Nu=Nu, Ns=Ns, No=No, tds=hyperparams['tds'])
+        elif model_type == "FCForecaster":
+            model = Forecaster.FCForecaster(
+                Nu=Nu, Ns=Ns, No=No, tds=hyperparams['tds'],
+                r_list=[hyperparams['r_width']] * 2, dropout_p=hyperparams['dropout_p']
+            )
+        elif model_type == "ESNForecaster":
+            model = Forecaster.ESNForecaster(
+                Nr=1000, Nu=Nu, Ns=Ns, No=No,
+                rho_sr=hyperparams['rho_sr'], alpha=hyperparams['alpha'],
+                sigma=hyperparams['sigma'], sigma_b=hyperparams['sigma_b']
+            )
+        else:
+            raise ValueError("Unsupported model type.")
+    except KeyError as e:
+        raise ValueError(f"Missing hyperparameter for model {model_type}: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize forecaster model: {e}")
+
+    # Train the model
+    try:
+        if model_type in ["LSTMForecaster", "GRUForecaster"]:
+            model.set_device(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+            model.fit(U_train_scaled, S_train_scaled, O_train_scaled, lags=hyperparams['lags'], lr=hyperparams['adam_lr'])
+            model.set_device("cpu")
+        elif model_type == "LinearForecaster":
+            model.fit(U_train_scaled, S_train_scaled, O_train_scaled, beta=hyperparams['beta'])
+        elif model_type == "FCForecaster":
+            model.set_device(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+            model.fit(U_train_scaled, S_train_scaled, O_train_scaled, lr=hyperparams['adam_lr'], num_epochs=5000)
+            model.set_device("cpu")
+        elif model_type == "ESNForecaster":
+            model.fit(U_train_scaled, S_train_scaled, O_train_scaled, beta=hyperparams['beta'], spinup=300)
+    except Exception as e:
+        raise RuntimeError(f"Failed to train forecaster model {model_type}: {e}")
+
+    # Configure the MPC controller
+    try:
+        controller = MPController(
+            forecaster=model,
+            dev=control_params.get('dev', 100),
+            u_1=control_params.get('u_1', 1),
+            u_2=control_params.get('u_2', 20),
+            soft_bounds=(0.05, 0.95),
+            hard_bounds=(0, 1)
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to configure MPC controller: {e}")
+
+    # Prepare for closed-loop simulation
+    control_horizon = control_params.get('control_horizon', 20)
+    forecast_horizon = control_params.get('forecast_horizon', 50)
+
+    # Initialize lists to store simulation results
+    S_list = []
+    U_list = []
+
+    # Initial state
+    s_k = torch.zeros((Ns, 1), dtype=torch.float64)
+
+    # Perform simulation
+    for t_step in range(1600):
+        if t_step % control_horizon == 0:
+            U_act_scaled = controller.compute_act(
+                U=torch.ones((Nu, forecast_horizon), dtype=torch.float64) * 0.5,
+                ref_vals=ref_traj_scaled[:, t_step:t_step + forecast_horizon],
+                s_k=s_k,
+                r_k=torch.zeros((model.Nr, 1), dtype=torch.float64)
+            )
+        u_k = control_scaler.inverse_transform(U_act_scaled.detach().numpy().T).T
+        s_k = sim.simulate(U=torch.tensor(u_k, dtype=torch.float64))
+
+        # Collect results
+        S_list.append(s_k.detach().numpy())
+        U_list.append(u_k)
+
+    # Final output
+    return {
+        "controlled_states": np.hstack(S_list),
+        "applied_controls": np.hstack(U_list),
+        "reference_trajectory": reference_trajectory
+    }
