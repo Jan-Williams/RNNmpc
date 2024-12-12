@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import scipy.integrate
+from copy import deepcopy
 
 
 class OdeControl:
@@ -27,7 +28,7 @@ class OdeControl:
         generate training data for network
     """
 
-    def __init__(self, dynamics: function, x0: np.array, nu: int, control_disc: float = 0.01) -> None:
+    def __init__(self, dynamics, x0: np.array, nu: int, control_disc: float = 0.1) -> None:
         """Initialize system with specified control discretization.
 
         No model discretization is used because we use the variable time-stepper in
@@ -58,9 +59,9 @@ class OdeControl:
         except:
             raise ValueError("initial conditions vector is not the correct length")
         
-        try: 
+        try:
             dynamics(0,x0,np.zeros(nu))
-            try: 
+            try:
                 dynamics(0,x0,np.zeros(nu+1))
             except:
                 None
@@ -116,49 +117,105 @@ class OdeControl:
         x0 = x0.detach().numpy()
         t_steps = U.shape[1]
         X_list = np.empty((x0.size, t_steps))
-        for step in range(t_steps):
+        X_list[:, 0] = x0
+        for step in range(1,t_steps):
             x0 = self.control_step(U[:, step], x0)
             X_list[:, step] = x0
         X_list = torch.tensor(X_list, dtype=torch.float64)
         return X_list
 
-    def generate_data(self, num_trajectories, Tfinal):
-        """Generate random trajectories for training a neural network
+    def generate_data(self, train_len: float, switching_period: float,
+                      filter_len: int, dist_min: float, dist_max: float,
+                      x0_max: np.ndarray, x0_min: np.ndarray, train_percentage: float):
+        """Generate random trajectory for training a neural network
 
         Parameters:
         -----------
-        num_trajectories: int
-            number of trajectories to generate
-        Tfinal: torch.DoubleTensor
-            final time for the trajectories
+        train_len: float
+            length of training data in seconds
+        switching_period: float
+            Time interval between control changes in training input
+        filter_len: int
+            Width of smoothing filter applied to control signal
+        dist_min: float
+            Minimum value of initial states
+        dist_max: float
+            Maximum value of initial states
+        x0_max: np.ndarray
+            Maximum value of each initial condition
+        x0_min: np.ndarray
+            Minimum value of each initial condition
+        train_percentage: float
+            percent of trajectory to use for training
 
-        Returns:
-        ----------
-        trajectories: torch.DoubleTensor
-            n trajectories, dims (num_trajectories, len(x0), len(Tvec))
+        Outputs:
+        -----------
+        return_dict: dictionary
+            Dictionary of trajectory data and metadata
+
+            U_train: np.array
+                control inputs of training data trajectory
+            U_valid: np.array
+                control inputs of validation data trajectory
+            S_train: np.array
+                State vectors of training data trajectory
+            S_valid: np.array
+                State vectors of validation data trajectory
+            O_train: np.array
+                Time shifted state vectors of training data trajectory
+            O_valid: np.array
+                Time shifted state vectors of validation data trajectory
         """
-        n = num_trajectories
-        Tvec = np.arange(0,Tfinal,self.control_disc)
-        default_x0 = self.default_x0
-        trajectories = torch.zeros((n,default_x0.size,np.size(Tvec)))
+
+        #make sure that dist_min != dist_max so there is a std deviation
+        if dist_min == dist_max:
+            raise ValueError("dist_min cannot equal dist_max")
+        if dist_min > dist_max:
+            raise ValueError("dist_min cannot be greater than dist_max")
+
+        #generate random control inputs
+        train_control_vals = np.random.uniform(
+            dist_min, dist_max, size = (self.nu, int(train_len / switching_period))
+        )
+        #train_control_sig = np.repeat(
+        #    train_control_vals, int(switching_period / self.control_disc)
+        #)
+
+        train_control_sig = torch.tensor(np.array(train_control_vals), dtype=torch.float64)
+        #train_control_mean = torch.mean(train_control_sig, axis=1).reshape(-1, 1)
+        #train_control_std = torch.std(train_control_sig, axis=1).reshape(-1, 1)
+        train_control_sig_len = int(train_control_sig.shape[1]*train_percentage/100)
+        print(train_control_sig_len)
+
+        tot_sig = deepcopy(train_control_sig)
 
 
-        #generate n random x0,u
-        for i in range(0,n):
-            print(default_x0.size())
-            x0 = torch.rand(default_x0.shape)
-            u = torch.rand((self.nu,len(Tvec)))
-            trajectories[i,:] = self.simulate(u,x0)
-            #self.simulate(u,x0)
-        #simulate n each x0,u
-        #return trajectories
-        #how should it be returned?
-        return trajectories
-    
-    def set_default_x0(self, x0: np.array):
-        try:
-            if np.shape(self.dynamics(0, x0, np.zeros(self.nu))) != np.shape(x0):
-                raise ValueError("initial conditions vector is not the correct length")
-        except:
-            raise ValueError("initial conditions vector is not the correct length")
-        self.default_x0 = x0
+        tot_out = self.simulate(tot_sig,torch.DoubleTensor(self.default_x0).squeeze())
+
+        
+        U_train = tot_sig[:, :train_control_sig_len]
+        S_train = tot_out[:, :train_control_sig_len]
+        O_train = tot_out[:, 1:train_control_sig_len + 1]
+
+        U_valid = tot_sig[:, train_control_sig_len:]
+        S_valid = tot_out[:, train_control_sig_len:-1]
+        O_valid = tot_out[:, train_control_sig_len + 1:]
+
+        return_dict = {
+            "U_train": U_train.detach().numpy().tolist(),
+            "U_valid": U_valid.detach().numpy().tolist(),
+            "S_train": S_train.detach().numpy().tolist(),
+            "S_valid": S_valid.detach().numpy().tolist(),
+            "O_train": O_train.detach().numpy().tolist(),
+            "O_valid": O_valid.detach().numpy().tolist(),
+            #"simulator": simulator, #should this be returned???
+            "train_len": train_len,
+            #"fcast_lens": fcast_lens,
+            "switching_period": switching_period,
+            "control_disc": self.control_disc,
+            "filter_len": filter_len,
+        }
+
+        return return_dict
+        #with open(dest + "/data.json", "w+") as fp:
+        #    json.dump(return_dict, fp)
