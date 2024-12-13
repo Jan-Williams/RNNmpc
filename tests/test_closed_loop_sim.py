@@ -1,119 +1,152 @@
 import unittest
-import numpy as np
-from RNNmpc.utils import closed_loop_sim 
+import torch
+from src.RNNmpc.utils import closed_loop_sim
+
 
 class TestClosedLoopSim(unittest.TestCase):
 
     def setUp(self):
-        """Set up shared resources for tests."""
-        self.environment = "LorenzControl"
-        self.reference_trajectory = np.zeros((3, 500))
-        self.train_data = {
-            "U_train": np.random.rand(1, 500),
-            "S_train": np.random.rand(3, 500),
-            "O_train": np.random.rand(3, 500)
-        }
-        self.control_params = {
+        # Create a mock simulator and forecaster for testing
+        class MockSimulator:
+            def __init__(self):
+                self.control_dim = 1
+                self.sensor_dim = 2
+
+            def initial_state(self):
+                return torch.zeros((2, 1), dtype=torch.float64)
+
+            def simulate(self, U, x0):
+                return x0 + U
+
+        class MockForecaster:
+            def forecast(self, U, **kwargs):
+                return U * 2
+
+        self.simulator = MockSimulator()
+        self.forecaster = MockForecaster()
+
+        self.controller_params = {
             "dev": 100,
             "u_1": 1,
-            "u_2": 20,
-            "control_horizon": 20,
-            "forecast_horizon": 50
-        }
-        self.hyperparams_lstm = {
-            "Nr": 1000,
-            "dropout_p": 0.2,
-            "lags": 10,
-            "adam_lr": 0.001
-        }
-        self.hyperparams_linear = {
-            "tds": [-5, -4, -3, -2, -1],
-            "beta": 0.01
+            "u_2": 10,
+            "soft_bounds": (0.05, 0.95),
+            "hard_bounds": (0, 1),
         }
 
-    def test_lstm_forecaster(self):
-        """Test the function with LSTMForecaster."""
+        self.ref_traj = torch.ones((2, 100), dtype=torch.float64)
+        self.forecast_horizon = 10
+        self.control_horizon = 5
+        self.num_steps = 20
+
+    def test_valid_inputs(self):
+        # Ensure function runs without error on valid inputs
         results = closed_loop_sim(
-            environment=self.environment,
-            reference_trajectory=self.reference_trajectory,
-            model_type="LSTMForecaster",
-            train_data=self.train_data,
-            hyperparams=self.hyperparams_lstm,
-            control_params=self.control_params
+            simulator=self.simulator,
+            forecaster=self.forecaster,
+            controller_params=self.controller_params,
+            ref_traj=self.ref_traj,
+            forecast_horizon=self.forecast_horizon,
+            control_horizon=self.control_horizon,
+            num_steps=self.num_steps,
         )
-        self.assertIn("controlled_states", results)
-        self.assertIn("applied_controls", results)
-        self.assertIn("reference_trajectory", results)
-        self.assertEqual(results["controlled_states"].shape[0], 3)  # Check dimensions
-        self.assertEqual(results["applied_controls"].shape[0], 1)
 
-    def test_linear_forecaster(self):
-        """Test the function with LinearForecaster."""
-        results = closed_loop_sim(
-            environment=self.environment,
-            reference_trajectory=self.reference_trajectory,
-            model_type="LinearForecaster",
-            train_data=self.train_data,
-            hyperparams=self.hyperparams_linear,
-            control_params=self.control_params
-        )
-        self.assertIn("controlled_states", results)
-        self.assertIn("applied_controls", results)
-        self.assertIn("reference_trajectory", results)
-        self.assertEqual(results["controlled_states"].shape[0], 3)  # Check dimensions
-        self.assertEqual(results["applied_controls"].shape[0], 1)
+        self.assertIn("U", results)
+        self.assertIn("S", results)
+        self.assertIn("ref_traj", results)
+        self.assertEqual(results["U"].shape[1], self.num_steps)
+        self.assertEqual(results["S"].shape[1], self.num_steps)
 
-    def test_invalid_environment(self):
-        """Test invalid environment raises a ValueError."""
-        with self.assertRaises(ValueError):
-            closed_loop_sim(
-                environment="InvalidEnvironment",
-                reference_trajectory=self.reference_trajectory,
-                model_type="LSTMForecaster",
-                train_data=self.train_data,
-                hyperparams=self.hyperparams_lstm,
-                control_params=self.control_params
-            )
-
-    def test_invalid_model_type(self):
-        """Test invalid model type raises a ValueError."""
-        with self.assertRaises(ValueError):
-            closed_loop_sim(
-                environment=self.environment,
-                reference_trajectory=self.reference_trajectory,
-                model_type="InvalidForecaster",
-                train_data=self.train_data,
-                hyperparams=self.hyperparams_lstm,
-                control_params=self.control_params
-            )
-
-    def test_missing_train_data_key(self):
-        """Test missing key in train_data raises a ValueError."""
-        incomplete_train_data = {
-            "U_train": np.random.rand(1, 500),
-            "S_train": np.random.rand(3, 500)
-        }  # Missing 'O_train'
-        with self.assertRaises(ValueError):
-            closed_loop_sim(
-                environment=self.environment,
-                reference_trajectory=self.reference_trajectory,
-                model_type="LSTMForecaster",
-                train_data=incomplete_train_data,
-                hyperparams=self.hyperparams_lstm,
-                control_params=self.control_params
-            )
-
-    def test_invalid_reference_trajectory_type(self):
-        """Test invalid reference_trajectory type raises a TypeError."""
+    def test_invalid_simulator(self):
         with self.assertRaises(TypeError):
             closed_loop_sim(
-                environment=self.environment,
-                reference_trajectory=list(self.reference_trajectory),  # Should be a NumPy array
-                model_type="LSTMForecaster",
-                train_data=self.train_data,
-                hyperparams=self.hyperparams_lstm,
-                control_params=self.control_params
+                simulator=None,
+                forecaster=self.forecaster,
+                controller_params=self.controller_params,
+                ref_traj=self.ref_traj,
+                forecast_horizon=self.forecast_horizon,
+                control_horizon=self.control_horizon,
+                num_steps=self.num_steps,
             )
+
+    def test_invalid_forecaster(self):
+        with self.assertRaises(TypeError):
+            closed_loop_sim(
+                simulator=self.simulator,
+                forecaster=None,
+                controller_params=self.controller_params,
+                ref_traj=self.ref_traj,
+                forecast_horizon=self.forecast_horizon,
+                control_horizon=self.control_horizon,
+                num_steps=self.num_steps,
+            )
+
+    def test_invalid_ref_traj(self):
+        with self.assertRaises(TypeError):
+            closed_loop_sim(
+                simulator=self.simulator,
+                forecaster=self.forecaster,
+                controller_params=self.controller_params,
+                ref_traj=None,
+                forecast_horizon=self.forecast_horizon,
+                control_horizon=self.control_horizon,
+                num_steps=self.num_steps,
+            )
+
+    def test_negative_forecast_horizon(self):
+        with self.assertRaises(ValueError):
+            closed_loop_sim(
+                simulator=self.simulator,
+                forecaster=self.forecaster,
+                controller_params=self.controller_params,
+                ref_traj=self.ref_traj,
+                forecast_horizon=-1,
+                control_horizon=self.control_horizon,
+                num_steps=self.num_steps,
+            )
+
+    def test_negative_control_horizon(self):
+        with self.assertRaises(ValueError):
+            closed_loop_sim(
+                simulator=self.simulator,
+                forecaster=self.forecaster,
+                controller_params=self.controller_params,
+                ref_traj=self.ref_traj,
+                forecast_horizon=self.forecast_horizon,
+                control_horizon=-1,
+                num_steps=self.num_steps,
+            )
+
+    def test_negative_num_steps(self):
+        with self.assertRaises(ValueError):
+            closed_loop_sim(
+                simulator=self.simulator,
+                forecaster=self.forecaster,
+                controller_params=self.controller_params,
+                ref_traj=self.ref_traj,
+                forecast_horizon=self.forecast_horizon,
+                control_horizon=self.control_horizon,
+                num_steps=-1,
+            )
+
+    def test_large_forecast_horizon(self):
+        # Ensure function runs when forecast_horizon is very large
+        large_forecast_horizon = 50
+        results = closed_loop_sim(
+            simulator=self.simulator,
+            forecaster=self.forecaster,
+            controller_params=self.controller_params,
+            ref_traj=self.ref_traj,
+            forecast_horizon=large_forecast_horizon,
+            control_horizon=self.control_horizon,
+            num_steps=self.num_steps,
+        )
+
+        self.assertIn("U", results)
+        self.assertIn("S", results)
+        self.assertIn("ref_traj", results)
+        self.assertEqual(results["U"].shape[1], self.num_steps)
+        self.assertEqual(results["S"].shape[1], self.num_steps)
+
 
 if __name__ == "__main__":
     unittest.main()
