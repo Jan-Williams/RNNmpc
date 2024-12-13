@@ -1,9 +1,9 @@
 """simulator class for general ODEs"""
+
 from copy import deepcopy
 import numpy as np
 import torch
 import scipy.integrate
-
 
 
 class OdeControl:
@@ -30,16 +30,18 @@ class OdeControl:
         generate training data for network
     """
 
-    def __init__(self, dynamics, x0: np.array, nu: int, control_disc: float = 0.1) -> None:
+    def __init__(
+        self, dynamics, x0: np.array, nu: int, control_disc: float = 0.1
+    ) -> None:
         """Initialize system with specified control discretization.
 
-        No model discretization is used because we use the variable time-stepper in
-        scipy.integrate.solve_ivp.
+        No model discretization is used because we use the variable
+        time-stepper in scipy.integrate.solve_ivp.
 
         Parameters:
         -----------
         dynamics: function
-            dynamics function to be used. 
+            dynamics function to be used.
         x0: np.array
             initial condition
         nu: int
@@ -57,17 +59,21 @@ class OdeControl:
 
         try:
             if np.shape(dynamics(0, x0, np.zeros(nu))) != np.shape(x0):
-                raise ValueError("initial conditions vector is not the correct length")
+                raise ValueError(
+                    "initial conditions vector is not the correct length"
+                )
         except Exception as exc:
-            raise ValueError("initial conditions vector is not the correct length") from exc
+            raise ValueError(
+                "initial conditions vector is not the correct length"
+            ) from exc
 
         try:
-            dynamics(0,x0,np.zeros(nu))
+            dynamics(0, x0, np.zeros(nu))
         except Exception as exc:
             raise ValueError("nu is too small") from exc
 
         try:
-            dynamics(0,x0,np.zeros(nu-1))
+            dynamics(0, x0, np.zeros(nu - 1))
             raise ValueError("nu is too big")
         except Exception as exc:
             pass
@@ -122,14 +128,20 @@ class OdeControl:
         t_steps = U.shape[1]
         X_list = np.empty((x0.size, t_steps))
         X_list[:, 0] = x0
-        for step in range(1,t_steps):
+        for step in range(1, t_steps):
             x0 = self.control_step(U[:, step], x0)
             X_list[:, step] = x0
         X_list = torch.tensor(X_list, dtype=torch.float64)
         return X_list
 
-    def generate_data(self, train_len: float, switching_period: float,
-                      dist_min: float, dist_max: float, train_percentage: float):
+    def generate_data(
+        self,
+        train_len: float,
+        switching_period: float,
+        dist_min: float,
+        dist_max: float,
+        train_percentage: float,
+    ):
         """Generate random trajectory for training a neural network
 
         Parameters:
@@ -164,27 +176,35 @@ class OdeControl:
                 Time shifted state vectors of validation data trajectory
         """
 
-        #make sure that dist_min != dist_max so there is a std deviation
+        # make sure that dist_min != dist_max so there is a std deviation
         if dist_min == dist_max:
             raise ValueError("dist_min cannot equal dist_max")
         if dist_min > dist_max:
             raise ValueError("dist_min cannot be greater than dist_max")
 
-        #generate random control inputs
+        # generate random control inputs
         train_control_vals = np.random.uniform(
-            dist_min, dist_max, size = (self.nu, int(train_len / switching_period))
+            dist_min,
+            dist_max,
+            size=(self.nu, int(train_len / switching_period)),
         )
 
-        train_control_sig = torch.tensor(np.array(train_control_vals), dtype=torch.float64)
-        train_control_sig_len = int(train_control_sig.shape[1]*train_percentage/100)
+        train_control_sig = torch.tensor(
+            np.array(train_control_vals), dtype=torch.float64
+        )
+        train_control_sig_len = int(
+            train_control_sig.shape[1] * train_percentage / 100
+        )
 
         tot_sig = deepcopy(train_control_sig)
-        tot_out = self.simulate(tot_sig,torch.DoubleTensor(self.default_x0).squeeze())
+        tot_out = self.simulate(
+            tot_sig, torch.DoubleTensor(self.default_x0).squeeze()
+        )
 
-        #create data matrices of control inputs, states, and time shifted states
+        # create data mats of control inputs, states and time shifted states
         U_train = tot_sig[:, :train_control_sig_len]
         S_train = tot_out[:, :train_control_sig_len]
-        O_train = tot_out[:, 1:train_control_sig_len + 1]
+        O_train = tot_out[:, 1: train_control_sig_len + 1]
 
         U_valid = tot_sig[:, train_control_sig_len:]
         S_valid = tot_out[:, train_control_sig_len:-1]
@@ -199,7 +219,7 @@ class OdeControl:
             "O_valid": O_valid.detach().numpy().tolist(),
             "train_len": train_len,
             "switching_period": switching_period,
-            "control_disc": self.control_disc
+            "control_disc": self.control_disc,
         }
 
         return return_dict
