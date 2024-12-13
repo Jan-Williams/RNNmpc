@@ -106,7 +106,8 @@ Caveat: Pytorch implementation is going to be much slower than it could be in Ja
     Components used:
     S5Forecaster
 
-## Split train and val data
+
+## 6. Split train and val data
     Inputs:
     ts_data (torch.Tensor)
 
@@ -116,3 +117,18 @@ Caveat: Pytorch implementation is going to be much slower than it could be in Ja
 
     Outputs:
     forecast of fcast_steps (torch.Tensor)
+
+## 7. Simulator(Neuromancer)
+    Inputs:
+    simulation discretization (float)
+
+    control discretization (float)
+
+    neuromancer nonautonomous dynamics class (class)
+
+    Outputs:
+    System advanced one timestep into the future (np.array)
+
+    Components used: neuromancer.psl.nonautonomous
+
+    Side effects: Keep track of current state of the system (change object attribute).
