@@ -2,6 +2,7 @@ import unittest
 import torch
 from src.RNNmpc.utils import closed_loop_sim
 
+
 class TestClosedLoopSim(unittest.TestCase):
 
     def setUp(self):
@@ -31,7 +32,7 @@ class TestClosedLoopSim(unittest.TestCase):
             "soft_bounds": (0.05, 0.95),
             "hard_bounds": (0, 1),
         }
-        
+
         self.ref_traj = torch.ones((2, 100), dtype=torch.float64)
         self.forecast_horizon = 10
         self.control_horizon = 5
@@ -145,6 +146,7 @@ class TestClosedLoopSim(unittest.TestCase):
         self.assertIn("ref_traj", results)
         self.assertEqual(results["U"].shape[1], self.num_steps)
         self.assertEqual(results["S"].shape[1], self.num_steps)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,10 +1,9 @@
+"""Utils functions including closed_loop_sim."""
+
 import torch
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from RNNmpc import MPController, Forecasters, Simulators
-
-### Note: the function forecast_eval is useful in replicating the results from
-### the paper but is likely not as useful for other applications
+from RNNmpc import MPController, Forecasters
 
 
 def forecast_eval(
@@ -118,7 +117,6 @@ def forecast_eval(
 
     concat_U = torch.hstack((U_train, U_valid))
     concat_S = torch.hstack((S_train, S_valid))
-    concat_O = torch.hstack((O_train, O_valid))
 
     No = O_valid.shape[0]
     Ns = S_valid.shape[0]
@@ -146,18 +144,24 @@ def forecast_eval(
             alpha=alpha,
         )
         model.set_device(device)
-        esn_r = model.fit(U_train, S_train, O_train, beta=beta, spinup=200)
+        _ = model.fit(U_train, S_train, O_train, beta=beta, spinup=200)
         tot_forecast = torch.zeros((No, 0)).to("cpu")
         for i in range(10):
             fcast_start_index = U_train.shape[1] + i * fcast_steps
             spin_r = model.spin(
-                U_spin=concat_U[:, fcast_start_index - 200 : fcast_start_index],
-                S_spin=concat_S[:, fcast_start_index - 200 : fcast_start_index],
+                U_spin=concat_U[
+                    :, fcast_start_index - 200: fcast_start_index
+                ],
+                S_spin=concat_S[
+                    :, fcast_start_index - 200: fcast_start_index
+                ],
             )
             fcast = model.forecast(
-                concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
+                concat_U[
+                    :, fcast_start_index: fcast_start_index + fcast_steps
+                ],
                 r_k=spin_r,
-                s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
+                s_k=concat_S[:, fcast_start_index: fcast_start_index + 1],
             )
             tot_forecast = torch.hstack((tot_forecast, fcast.to("cpu")))
 
@@ -175,8 +179,13 @@ def forecast_eval(
                 Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p
             )
             model.set_device(device)
-            out_r = model.fit(
-                U_train, S_train, O_train, lags=lags, lr=adam_lr, num_epochs=5000
+            _ = model.fit(
+                U_train,
+                S_train,
+                O_train,
+                lags=lags,
+                lr=adam_lr,
+                num_epochs=5000,
             )
 
         elif model_type == "LSTMForecaster":
@@ -191,8 +200,13 @@ def forecast_eval(
                 Nr=Nr, Nu=Nu, Ns=Ns, No=No, dropout_p=dropout_p
             )
             model.set_device(device)
-            out_r = model.fit(
-                U_train, S_train, O_train, lags=lags, lr=adam_lr, num_epochs=5000
+            _ = model.fit(
+                U_train,
+                S_train,
+                O_train,
+                lags=lags,
+                lr=adam_lr,
+                num_epochs=5000,
             )
 
         elif model_type == "LinearForecaster":
@@ -218,7 +232,12 @@ def forecast_eval(
             }
             lags = max(-np.array(tds))
             model = Forecasters.FCForecaster(
-                Nu=Nu, Ns=Ns, No=No, tds=tds, r_list=[r_width] * 2, dropout_p=dropout_p
+                Nu=Nu,
+                Ns=Ns,
+                No=No,
+                tds=tds,
+                r_list=[r_width] * 2,
+                dropout_p=dropout_p,
             )
             model.set_device(device)
             model.fit(U_train, S_train, O_train, lr=adam_lr, num_epochs=5000)
@@ -228,10 +247,16 @@ def forecast_eval(
         for i in range(10):
             fcast_start_index = U_train.shape[1] + i * fcast_steps
             fcast = model.forecast(
-                U=concat_U[:, fcast_start_index : fcast_start_index + fcast_steps],
-                U_spin=concat_U[:, fcast_start_index - lags + 1 : fcast_start_index],
-                S_spin=concat_S[:, fcast_start_index - lags + 1 : fcast_start_index],
-                s_k=concat_S[:, fcast_start_index : fcast_start_index + 1],
+                U=concat_U[
+                    :, fcast_start_index: fcast_start_index + fcast_steps
+                ],
+                U_spin=concat_U[
+                    :, fcast_start_index - lags + 1: fcast_start_index
+                ],
+                S_spin=concat_S[
+                    :, fcast_start_index - lags + 1: fcast_start_index
+                ],
+                s_k=concat_S[:, fcast_start_index: fcast_start_index + 1],
             )
             tot_forecast = torch.hstack((tot_forecast, fcast.to("cpu")))
 
@@ -256,16 +281,26 @@ def forecast_eval(
     return ret_dict, tot_forecast
 
 
-def closed_loop_sim(simulator, forecaster, controller_params, ref_traj, forecast_horizon, control_horizon, num_steps):
+def closed_loop_sim(
+    simulator,
+    forecaster,
+    controller_params,
+    ref_traj,
+    forecast_horizon,
+    control_horizon,
+    num_steps,
+):
     """
     Perform a closed-loop simulation using the given simulator and controller.
 
     Parameters:
     -----------
     simulator: object
-        The simulation environment. Must have `initial_state` and `simulate` methods.
+        The simulation environment. Must have `initial_state` and `simulate`
+        methods.
     forecaster: object
-        The forecasting model for the controller. Must have a `forecast` method.
+        The forecasting model for the controller. Must have a `forecast`
+        method.
     controller_params: dict
         Parameters for the controller, including penalties and bounds.
     ref_traj: torch.DoubleTensor
@@ -283,8 +318,12 @@ def closed_loop_sim(simulator, forecaster, controller_params, ref_traj, forecast
         Contains the control inputs and sensor outputs during the simulation.
     """
     # Error handling for input parameters
-    if not callable(getattr(simulator, "initial_state", None)) or not callable(getattr(simulator, "simulate", None)):
-        raise TypeError("simulator must have `initial_state` and `simulate` methods.")
+    if not callable(getattr(simulator, "initial_state", None)) or not callable(
+        getattr(simulator, "simulate", None)
+    ):
+        raise TypeError(
+            "simulator must have `initial_state` and `simulate` methods."
+        )
     if not callable(getattr(forecaster, "forecast", None)):
         raise TypeError("forecaster must have a `forecast` method.")
     if not isinstance(controller_params, dict):
@@ -303,7 +342,9 @@ def closed_loop_sim(simulator, forecaster, controller_params, ref_traj, forecast
     control_scaler = MinMaxScaler()
 
     # Fit control scaler with expected control range (e.g., [0, 1])
-    control_scaler.fit(np.array([[0], [1]]))  # Assuming control values are normalized between 0 and 1
+    control_scaler.fit(
+        np.array([[0], [1]])
+    )  # Assuming control values are normalized between 0 and 1
 
     # Fit sensor scaler with the reference trajectory
     sensor_scaler.fit(ref_traj.T)
@@ -311,11 +352,15 @@ def closed_loop_sim(simulator, forecaster, controller_params, ref_traj, forecast
     Nu, Ns = simulator.control_dim, simulator.sensor_dim
 
     # Scale reference trajectory
-    ref_traj_scaled = torch.tensor(sensor_scaler.fit_transform(ref_traj.T).T, dtype=torch.float64)
+    ref_traj_scaled = torch.tensor(
+        sensor_scaler.fit_transform(ref_traj.T).T, dtype=torch.float64
+    )
 
     # Initialize simulator states
     s_k = simulator.initial_state()
-    s_k_scaled = torch.tensor(sensor_scaler.transform(s_k.numpy().T).T, dtype=torch.float64)
+    s_k_scaled = torch.tensor(
+        sensor_scaler.transform(s_k.numpy().T).T, dtype=torch.float64
+    )
 
     # Initialize control variables
     U_act_scaled = torch.ones((Nu, forecast_horizon), requires_grad=True) * 0.5
@@ -331,44 +376,72 @@ def closed_loop_sim(simulator, forecaster, controller_params, ref_traj, forecast
         if t_step % control_horizon == 0:
             # Prepare the control sequence
             U_act_temp = torch.zeros((Nu, forecast_horizon))
-            U_act_temp[:, :control_horizon] = U_act_scaled[:, forecast_horizon - control_horizon:].data
-            U_act_temp[:, control_horizon:] = U_act_scaled[:, -1].data.unsqueeze(1)
+            U_act_temp[:, :control_horizon] = U_act_scaled[
+                :, forecast_horizon - control_horizon:
+            ].data
+            U_act_temp[:, control_horizon:] = U_act_scaled[
+                :, -1
+            ].data.unsqueeze(1)
             U_act_scaled = U_act_temp.clone()
             U_act_scaled.requires_grad = True
 
             # Compute optimal control actions
             # Compute optimal control actions
             if isinstance(forecaster, Forecasters.ESNForecaster):
-                r_k = torch.zeros((Ns, 1), dtype=torch.float64)  # Initialize r_k as needed
+                r_k = torch.zeros(
+                    (Ns, 1), dtype=torch.float64
+                )  # Initialize r_k as needed
                 U_act_scaled = controller.compute_act(
                     U=U_act_scaled,
-                    ref_vals=ref_traj_scaled[:, t_step : t_step + forecast_horizon],
+                    ref_vals=ref_traj_scaled[
+                        :, t_step: t_step + forecast_horizon
+                    ],
                     s_k=s_k_scaled,
-                    U_last=U_act_scaled[:, control_horizon - 1 : control_horizon].clone(),
+                    U_last=U_act_scaled[
+                        :, control_horizon - 1: control_horizon
+                    ].clone(),
                     r_k=r_k,
                 ).clone()
             else:
                 # Prepare U_spin and S_spin
                 spin_start = max(0, t_step - forecast_horizon + 1)
-                U_spin = U_list[:, spin_start:t_step] if t_step > 0 else torch.zeros((Nu, forecast_horizon))
-                S_spin = S_list[:, spin_start:t_step] if t_step > 0 else torch.zeros((Ns, forecast_horizon))
+                U_spin = (
+                    U_list[:, spin_start:t_step]
+                    if t_step > 0
+                    else torch.zeros((Nu, forecast_horizon))
+                )
+                S_spin = (
+                    S_list[:, spin_start:t_step]
+                    if t_step > 0
+                    else torch.zeros((Ns, forecast_horizon))
+                )
 
                 U_act_scaled = controller.compute_act(
                     U=U_act_scaled,
-                    ref_vals=ref_traj_scaled[:, t_step : t_step + forecast_horizon],
+                    ref_vals=ref_traj_scaled[
+                        :, t_step: t_step + forecast_horizon
+                    ],
                     s_k=s_k_scaled,
-                    U_last=U_act_scaled[:, control_horizon - 1 : control_horizon].clone(),
+                    U_last=U_act_scaled[
+                        :, control_horizon - 1: control_horizon
+                    ].clone(),
                     U_spin=U_spin,
                     S_spin=S_spin,
                 ).clone()
 
-
         # Apply control input and advance simulator
-        u_k_scaled = U_act_scaled[:, t_step % control_horizon : t_step % control_horizon + 1]
-        u_k = torch.tensor(control_scaler.inverse_transform(u_k_scaled.numpy().T).T, dtype=torch.float64)
+        u_k_scaled = U_act_scaled[
+            :, t_step % control_horizon: t_step % control_horizon + 1
+        ]
+        u_k = torch.tensor(
+            control_scaler.inverse_transform(u_k_scaled.numpy().T).T,
+            dtype=torch.float64,
+        )
 
         s_k = simulator.simulate(U=u_k, x0=s_k)
-        s_k_scaled = torch.tensor(sensor_scaler.transform(s_k.numpy().T).T, dtype=torch.float64)
+        s_k_scaled = torch.tensor(
+            sensor_scaler.transform(s_k.numpy().T).T, dtype=torch.float64
+        )
 
         # Log results
         S_list = torch.hstack((S_list, s_k))
