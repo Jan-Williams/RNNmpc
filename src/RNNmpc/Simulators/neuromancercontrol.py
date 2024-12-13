@@ -1,8 +1,8 @@
 """Simulator class for neuromancer nonautonomous library"""
+
 from copy import deepcopy
 import numpy as np
 import torch
-
 
 
 class NeuromancerControl:
@@ -31,7 +31,9 @@ class NeuromancerControl:
         generate a trajectory for training
     """
 
-    def __init__(self, sys, model_disc: float = 0.1, control_disc: float = 0.1) -> None:
+    def __init__(
+        self, sys, model_disc: float = 0.1, control_disc: float = 0.1
+    ) -> None:
         """Initialize stirred tank system with specified control and model
         discretizations.
 
@@ -47,8 +49,8 @@ class NeuromancerControl:
         self.sys = sys
         self.sys.ts = model_disc
         self.model_steps = int(control_disc / model_disc)
-        self.default_x0 = np.array(sys.params[0]['x0'])
-        self.nx = len(sys.params[0]['x0'])
+        self.default_x0 = np.array(sys.params[0]["x0"])
+        self.nx = len(sys.params[0]["x0"])
         self.nu = sys.get_U(1).size
 
     def control_step(self, U: np.array, x0: np.array) -> np.array:
@@ -89,20 +91,24 @@ class NeuromancerControl:
         t_steps = U.shape[1]
         X_list = np.empty((x0.shape[0], t_steps))
         for step in range(t_steps):
-            U_rep = np.repeat(U[:, step : step + 1], self.model_steps, axis=1)
+            U_rep = np.repeat(U[:, step: step + 1], self.model_steps, axis=1)
             if step < t_steps - 1:
-                U_rep = np.hstack((U_rep, U[:, step + 1 : step + 2]))
+                U_rep = np.hstack((U_rep, U[:, step + 1: step + 2]))
             else:
                 U_rep = np.hstack((U_rep, torch.zeros((self.nu, 1))))
             x0 = self.control_step(x0=x0, U=U_rep)
-            X_list[:, step : step + 1] = x0
+            X_list[:, step: step + 1] = x0
         X_list = torch.tensor(X_list, dtype=torch.float64)
         return X_list
 
-
-    def generate_data(self, train_len: float, switching_period: float,
-                      dist_min: float, dist_max: float,
-                      train_percentage: float):
+    def generate_data(
+        self,
+        train_len: float,
+        switching_period: float,
+        dist_min: float,
+        dist_max: float,
+        train_percentage: float,
+    ):
         """Generate random trajectories for training a neural network
 
         Parameters:
@@ -137,7 +143,7 @@ class NeuromancerControl:
                 Time shifted state vectors of validation data trajectory
         """
 
-        #make sure that dist_min != dist_max so there is a std deviation
+        # make sure that dist_min != dist_max so there is a std deviation
         if dist_min == dist_max:
             raise ValueError("dist_min cannot equal dist_max")
         if dist_min > dist_max:
@@ -145,26 +151,32 @@ class NeuromancerControl:
         if switching_period <= 0:
             raise ValueError("The switching period must be positive non-zero")
 
-        #generate random control inputs
+        # generate random control inputs
         train_control_vals = np.random.uniform(
-            dist_min, dist_max, size = (self.nu, int(train_len / switching_period))
+            dist_min,
+            dist_max,
+            size=(self.nu, int(train_len / switching_period)),
         )
         train_control_sig = np.repeat(
             train_control_vals, int(switching_period / self.control_disc)
         )
         train_control_sig = train_control_vals
 
-        train_control_sig = torch.tensor(np.array(train_control_sig), dtype=torch.float64)
-        train_control_sig_len = int(np.round(train_control_sig.shape[1]*train_percentage/100))
+        train_control_sig = torch.tensor(
+            np.array(train_control_sig), dtype=torch.float64
+        )
+        train_control_sig_len = int(
+            np.round(train_control_sig.shape[1] * train_percentage / 100)
+        )
 
         tot_sig = deepcopy(train_control_sig)
-        tot_sig = tot_sig.reshape([self.nu,-1])
-        tot_out = self.simulate(tot_sig,torch.DoubleTensor(self.default_x0))
+        tot_sig = tot_sig.reshape([self.nu, -1])
+        tot_out = self.simulate(tot_sig, torch.DoubleTensor(self.default_x0))
 
-        #sort outputs between training and state_k,state_k+1,and controls
+        # sort outputs between training and state_k,state_k+1,and controls
         U_train = tot_sig[:, :train_control_sig_len]
         S_train = tot_out[:, :train_control_sig_len]
-        O_train = tot_out[:, 1:train_control_sig_len + 1]
+        O_train = tot_out[:, 1: train_control_sig_len + 1]
 
         U_valid = tot_sig[:, train_control_sig_len:]
         S_valid = tot_out[:, train_control_sig_len:-1]
@@ -180,7 +192,7 @@ class NeuromancerControl:
             "train_len": train_len,
             "switching_period": switching_period,
             "model_disc": self.model_disc,
-            "control_disc": self.control_disc
+            "control_disc": self.control_disc,
         }
 
         return return_dict
