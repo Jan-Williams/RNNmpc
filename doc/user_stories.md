@@ -67,6 +67,37 @@ Ravi uses the package to implement adaptive NPC behaviors in games, where RNN-MP
 25. Monica is an educator.
 Monica teaches advanced control systems and uses the package to demonstrate the integration of machine learning models with classical control techniques. The tool must have user-friendly visualization capabilities for educational purposes.
 
+26. The user is Alex, an industry practitioner.
+Alex works in a manufacturing company and is tasked with optimizing production processes using predictive control. He wants a library that is robust and can handle real-world data with noise and outliers. Alex prioritizes practical deployment and seeks tools that can integrate seamlessly with existing industrial systems like PLCs or SCADA.
+
+27. The user is Priya, a computational scientist.
+Priya is working on high-dimensional climate modeling. She wants to use RNNMPC to test control strategies for reducing carbon emissions in simulations. Priya needs a library capable of scaling to large datasets and running efficiently on high-performance computing clusters.
+
+28. The user is Marco, an undergraduate student.
+Marco is new to control theory and neural networks. He wants to explore RNNMPC as part of a semester project. Marco needs detailed documentation, tutorials, and pre-built examples to help him understand the basics of surrogate modeling and neural network-based control systems.
+
+29. The user is Elena, a data scientist at a startup.
+Elena’s company develops autonomous drones. She is interested in using RNNMPC to improve trajectory optimization and energy efficiency. Elena needs a library that supports real-time execution and offers API-level compatibility with drone control systems.
+
+30. The user is Ahmed, an engineer working in automotive research.
+Ahmed is exploring RNNMPC for model-based control in self-driving cars. He needs tools that allow for efficient simulation of control strategies in virtual environments and easy integration with existing automotive datasets, such as CAN bus data.
+
+31. The user is Mei, a software engineer in a robotics lab.
+Mei is tasked with developing control algorithms for robotic arms used in precision manufacturing. She needs a library that supports multi-input, multi-output (MIMO) systems and can be integrated with ROS (Robot Operating System). Mei values well-documented APIs and modularity for incorporating custom control layers.
+
+32. The user is Carlos, a Ph.D. student in aerodynamics.
+Carlos is researching active flow control for reducing drag on aircraft. He wants to use RNNMPC to create a control system that adapts to changing flow conditions in real time. Carlos needs tools for handling complex dynamics and fast computations, preferably with GPU acceleration.
+
+33. The user is Fatima, a professor teaching advanced control systems.
+Fatima wants to incorporate RNNMPC into her curriculum. She needs simple, pre-built examples that students can modify, as well as interactive visualization tools to help students understand how surrogate models work in predictive control.
+
+34. The user is Liam, an AI researcher in a large tech company.
+Liam is working on cutting-edge reinforcement learning (RL) algorithms and wants to compare RNNMPC with RL-based control techniques. He needs the library to support plug-and-play functionality with common RL frameworks and datasets, as well as extensive logging capabilities for detailed performance analysis.
+
+35. The user is Sophia, a mechanical engineer designing HVAC systems.
+Sophia is interested in using RNNMPC to optimize energy efficiency in large buildings. She needs a library that supports integration with real-time sensors, can handle time-series forecasting, and includes utilities for fine-tuning models based on environmental feedback.
+
+
 ## Implied Use Case:
 1. Functionality to flexibly generate data for a system of interest. The user provides details about the ODEs or PDEs that govern their system of interest, and the code provides an object that simulates the system while providing a consistent interface for subsequent model training and control evaluation.
 
