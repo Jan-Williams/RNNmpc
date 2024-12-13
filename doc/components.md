@@ -1,25 +1,6 @@
 # Components:
 
-## 1. Forecast. 
-
-    Inputs:
-    current state of the system (torch.DoubleTensor)
-
-    current sensor measurements (torch.DoubleTensor)
-
-    subsequent control inputs (torch.DoubleTensor)
-
-    Outputs: 
-    forecast of system dynamics (torch.DoubleTensor)
-
-    Components used:
-    module forward function (essentially just wrapped in a for loop)
-
-    No side effects.
-
-
-
-## 2. Simulator(ODE)
+## 1. Simulator(ODE)
     Inputs:
     simulation discretization (float)
 
@@ -40,7 +21,7 @@
 
     Side effects: Keep track of current state of the system (change object attribute).
 
-## 3. Simuate closed loop
+## 2. Simuate closed loop
     Inputs:
     trained forecaster (ESNForecaster, LSTMForecaster, etc.)
 
@@ -53,7 +34,7 @@
 
     Side effects: None.
 
-## 4. (Experimental) S5 model implemented
+## 3. (Experimental) S5 model implemented
     Inputs: 
     dimensionality of S5 layers (int)
 
@@ -68,6 +49,23 @@
     update parameters of S5 model
 
     Components used: nn.Module
+
+## 4. Forecast (S5 forward)
+
+    Inputs:
+    time history of measurements (torch.Tensor)
+
+    current sensor measurements (torch.Tensor)
+
+    delta (float)
+
+    Outputs: 
+    forecast of system dynamics (torch.Tensor)
+
+    Components used:
+    module forward function
+
+    No side effects.
 
 Caveat: Pytorch implementation is going to be much slower than it could be in Jax.
 
@@ -90,4 +88,4 @@ Caveat: Pytorch implementation is going to be much slower than it could be in Ja
     update parameters of S5 model
 
     Components used:
-    S5 model    
+    S5 model
