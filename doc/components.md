@@ -53,7 +53,7 @@
 
     Side effects: None.
 
-## 4. (Experimental) S5 model implemented in Jax
+## 4. (Experimental) S5 model implemented
     Inputs: 
     dimensionality of S5 layers (int)
 
@@ -61,25 +61,27 @@
 
     input dimension (int, dim. control input + dim. state measurement)
 
-    output dimension (int, dim. state measurements)
-
-    Optional arguments: initialization method, nonlinearity
-
     Outputs:
-    initialized model in Jax (nnx.Module)
+    initialized model (nn.Module)
 
     Side effects:
     update parameters of S5 model
 
-    Components used: nnx.Module
+    Components used: nn.Module
 
-Caveat: Although existing components of this work are all implemented in PyTorch, implementing a modified S5 architecture in Jax has a variety of advantages for downstream applications (namely, the more functional API of Jax will make other forms of control easier to implement). At this time, this experimental model will not function with existing methods/protocols.
+Caveat: Pytorch implementation is going to be much slower than it could be in Jax.
 
 ## 5. (Experimental) Train S5 model
     Inputs:
-    training data (jnp.array)
+    model (nn.Module)
 
-    optimizer (optax optimizers)
+    training data (torch.tensor)
+
+    learning rate (float)
+
+    lags (int)
+
+    num_epochs (int)
 
     Outputs: 
     None
