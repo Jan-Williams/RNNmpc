@@ -28,7 +28,6 @@ def test_generate_data():
 
     data = Sim.generate_data(train_len = train_len,
                              switching_period = switching_period,
-                             filter_len = filter_len, #maybe this should be 0?
                              dist_min = dist_min,
                              dist_max = dist_max,
                              train_percentage = train_percentage)
@@ -43,7 +42,6 @@ def test_generate_data():
     #test return dictionary has the right datatypes and values
     assert train_len == data['train_len']
     assert switching_period == data['switching_period']
-    assert filter_len == data['filter_len']
 
     #check datatypes
     assert isinstance(U_train,type([]))
