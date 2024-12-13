@@ -1,7 +1,9 @@
+"""simulator class for general ODEs"""
+from copy import deepcopy
 import numpy as np
 import torch
 import scipy.integrate
-from copy import deepcopy
+
 
 
 class OdeControl:
@@ -56,17 +58,19 @@ class OdeControl:
         try:
             if np.shape(dynamics(0, x0, np.zeros(nu))) != np.shape(x0):
                 raise ValueError("initial conditions vector is not the correct length")
-        except:
-            raise ValueError("initial conditions vector is not the correct length")
-        
+        except Exception as exc:
+            raise ValueError("initial conditions vector is not the correct length") from exc
+
         try:
             dynamics(0,x0,np.zeros(nu))
-            try:
-                dynamics(0,x0,np.zeros(nu+1))
-            except:
-                None
-        except:
-            raise ValueError("nu is too small")
+        except Exception as exc:
+            raise ValueError("nu is too small") from exc
+
+        try:
+            dynamics(0,x0,np.zeros(nu-1))
+            raise ValueError("nu is too big")
+        except Exception as exc:
+            pass
 
     def control_step(self, U: np.array, x0: np.array) -> np.array:
         """Advance system one control step.
@@ -125,8 +129,7 @@ class OdeControl:
         return X_list
 
     def generate_data(self, train_len: float, switching_period: float,
-                      filter_len: int, dist_min: float, dist_max: float,
-                      x0_max: np.ndarray, x0_min: np.ndarray, train_percentage: float):
+                      dist_min: float, dist_max: float, train_percentage: float):
         """Generate random trajectory for training a neural network
 
         Parameters:
@@ -135,16 +138,10 @@ class OdeControl:
             length of training data in seconds
         switching_period: float
             Time interval between control changes in training input
-        filter_len: int
-            Width of smoothing filter applied to control signal
         dist_min: float
             Minimum value of initial states
         dist_max: float
             Maximum value of initial states
-        x0_max: np.ndarray
-            Maximum value of each initial condition
-        x0_min: np.ndarray
-            Minimum value of each initial condition
         train_percentage: float
             percent of trajectory to use for training
 
@@ -177,22 +174,14 @@ class OdeControl:
         train_control_vals = np.random.uniform(
             dist_min, dist_max, size = (self.nu, int(train_len / switching_period))
         )
-        #train_control_sig = np.repeat(
-        #    train_control_vals, int(switching_period / self.control_disc)
-        #)
 
         train_control_sig = torch.tensor(np.array(train_control_vals), dtype=torch.float64)
-        #train_control_mean = torch.mean(train_control_sig, axis=1).reshape(-1, 1)
-        #train_control_std = torch.std(train_control_sig, axis=1).reshape(-1, 1)
         train_control_sig_len = int(train_control_sig.shape[1]*train_percentage/100)
-        print(train_control_sig_len)
 
         tot_sig = deepcopy(train_control_sig)
-
-
         tot_out = self.simulate(tot_sig,torch.DoubleTensor(self.default_x0).squeeze())
 
-        
+        #create data matrices of control inputs, states, and time shifted states
         U_train = tot_sig[:, :train_control_sig_len]
         S_train = tot_out[:, :train_control_sig_len]
         O_train = tot_out[:, 1:train_control_sig_len + 1]
@@ -208,14 +197,9 @@ class OdeControl:
             "S_valid": S_valid.detach().numpy().tolist(),
             "O_train": O_train.detach().numpy().tolist(),
             "O_valid": O_valid.detach().numpy().tolist(),
-            #"simulator": simulator, #should this be returned???
             "train_len": train_len,
-            #"fcast_lens": fcast_lens,
             "switching_period": switching_period,
-            "control_disc": self.control_disc,
-            "filter_len": filter_len,
+            "control_disc": self.control_disc
         }
 
         return return_dict
-        #with open(dest + "/data.json", "w+") as fp:
-        #    json.dump(return_dict, fp)

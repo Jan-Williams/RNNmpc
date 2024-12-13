@@ -24,6 +24,8 @@ class S5Layer(torch.nn.Module):
         initializes measurement matric, c_mat
     discretize(lambda_vec, b_mat, delta)
         compute discrete matrices lambda_bar and b_bar via zero order hold
+    forward(u_input, delta)
+        computes output sequence
     """
 
     def __init__(self, n_in: int, n_hidden: int) -> None:
@@ -102,11 +104,11 @@ class S5Layer(torch.nn.Module):
 
         Parameters:
         -----------
-        u_input: torch.cdouble
+        u_input: torch.Tensor (dtype=torch.complex128)
             measurement history, shape (seq_len, batch_size, n_in)
         delta: float
             discretization of zero order hold
-        x0: torch.cdouble
+        x0: torch.Tensor (dtype=torch.complex128)
             initial latent state, defaults to zeros, shape
             (batch_size, n_hidden)
         """
@@ -158,6 +160,11 @@ class S5Forecaster(torch.nn.Module):
         forecast
     delta: float
         discretization used for zero order hold
+
+    Methods:
+    ----------
+    forward(u_input, delta, x0)
+        computes forecast of fcast_steps
     """
 
     def __init__(self, params: tuple) -> None:
@@ -189,11 +196,11 @@ class S5Forecaster(torch.nn.Module):
 
         Parameters:
         ----------
-        u_input: torch.cdouble
+        u_input: torch.Tensor (dtype=torch.complex128)
             measurement history, shape (seq_len, batch_size, n_in)
         delta: float
             discretization of zero order hold
-        x0: torch.cdouble
+        x0: ttorch.Tensor (dtype=torch.complex128)
             initial latent state, defaults to zeros, shape
             (num_layers, batch_size, n_hidden)
         """
@@ -237,7 +244,19 @@ def train_model(
     lags: int,
     num_epochs: int = 100,
 ):
-    """Train S5Forecaster model."""
+    """Train S5Forecaster model.
+
+    Parameters:
+    ----------
+    model: S5Forecaster
+        S5 forecaster model to train
+    ts_data: torch.Tensor (dtype=torch.complex128)
+        tensor of time series data
+    lr: float
+        learning rate
+    num_epochs: int
+        number of epochs to train
+    """
     optimizer = torch.optim.Adam(model.parameters(), lr)
     criterion = torch.nn.MSELoss()
     train_dataset, valid_dataset = train_val_split(

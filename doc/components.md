@@ -34,38 +34,54 @@
 
     Side effects: None.
 
-## 3. (Experimental) S5 model implemented
-    Inputs: 
+## 3. (Experimental Class) S5 Layer
+    Attributes: 
+
     dimensionality of S5 layers (int)
 
-    number of stacked S5 layers (int)
+    input dimension (int)
 
-    input dimension (int, dim. control input + dim. state measurement)
+    Methods:
+    initialize state space matrix lambda
+        Outputs: state space matrix
 
-    Outputs:
-    initialized model (nn.Module)
+    initialize input matrix B
+        Outputs: input matrix
 
-    Side effects:
-    update parameters of S5 model
+    initialize output matrix C
+        Outputs: output matrix
+
+    discretize continuous parameters
+        Outputs: lambda_bar, B_bar
+
+    forward(u_input: torch.Tensor, delta: float)
+        Outputs: output sequence
 
     Components used: nn.Module
 
-## 4. Forecast (S5 forward)
+## 4. (Experimental Class) S5Forecaster
 
-    Inputs:
-    time history of measurements (torch.Tensor)
+    Attributes:
+    input dimension(int)
 
-    current sensor measurements (torch.Tensor)
+    hidden dimension (int)
+
+    number of S5 layers (int)
+
+    number of forecast steps (int)
+
+    output layer (torch.nn.Linear)
 
     delta (float)
 
-    Outputs: 
-    forecast of system dynamics (torch.Tensor)
+    S5 layerlist (torch.nn.ModuleList)
+
+    Methods: 
+    forward(u_input: torch.Tensor, delta: float, x0)
+        computes forecast of fcast_steps
 
     Components used:
-    module forward function
-
-    No side effects.
+    S5Layer
 
 Caveat: Pytorch implementation is going to be much slower than it could be in Jax.
 
@@ -88,9 +104,21 @@ Caveat: Pytorch implementation is going to be much slower than it could be in Ja
     update parameters of S5 model
 
     Components used:
-    S5 model
+    S5Forecaster
 
-## 6. Simulator(Neuromancer)
+
+## 6. Split train and val data
+    Inputs:
+    ts_data (torch.Tensor)
+
+    lags (int)
+
+    fcast_steps (int)
+
+    Outputs:
+    forecast of fcast_steps (torch.Tensor)
+
+## 7. Simulator(Neuromancer)
     Inputs:
     simulation discretization (float)
 
